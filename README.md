@@ -7,7 +7,7 @@ one very confident advisor.
 
 ## What it is
 
-Westbrook University runs an AI advisor called Oracle. It's fast, warm,
+A university runs an AI advisor called Oracle. It's fast, warm,
 specific, and well liked. Some time ago something went wrong, and the
 engineering team bolted a human-in-the-loop review step onto Oracle's release
 pipeline. That review step is you. The game calls you `LAYER` and gives you a
