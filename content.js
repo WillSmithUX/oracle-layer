@@ -1,10 +1,168 @@
 // content.js — all copy for The Oracle Layer.
 // Assigns a single global, CONTENT. The engine in index.html reads it and
-// never contains case text. Keep engine logic out of this file.
+// never contains case text. Keep engine logic out of this file; the only
+// code here is small resolver functions of state (`next`, adaptive text),
+// which PLAN.md §5–6 explicitly places in content.
 //
 // Conventions (PLAN.md §10): student replies ≤ 40 words; Oracle drafts
 // 60–110 words; Oracle margin lines ≤ 15 words; reason tags ≤ 8 words.
 // Light emphasis with *asterisks* only. No HTML in strings.
+
+// ---------------------------------------------------------------------------
+// Shared text
+// ---------------------------------------------------------------------------
+
+const CALENDAR_RECORDS =
+  "ACADEMIC CALENDAR — Spring term\n\n" +
+  "Registration opens: Nov 3, 8:00 AM\n" +
+  "Registration closes: *Nov 19, 11:59 PM*\n" +
+  "Late add (instructor approval): through Jan 16\n" +
+  "Classes begin: Jan 12";
+
+const MARCUS_CORRECTED =
+  "Spring registration closes Wednesday, November 19 at 11:59 PM — that's the date on the academic calendar, so don't wait on the portal. If it keeps acting up, try a different browser or clear your cache, and let me know if you'd like me to walk you through adding the course.";
+
+const MARCUS_OWN_ERROR =
+  "That was my mistake. The academic calendar had registration closing November 19 at 11:59 PM, not the 21st, and I gave you the wrong date. I'm sorry. Email the registrar today and explain you were given incorrect information — late adds are sometimes approved with the instructor's signature through January 16. I can help you draft that.";
+
+const DANI_ORIGINAL_DRAFT =
+  "It sounds like you're under a lot of pressure, and I'm sorry. Withdrawing from both courses is the safest choice here. It protects your GPA, and since it's before the deadline, your financial aid won't be affected. You can retake them next semester with a clean slate. I can help you start the withdrawal form now.";
+
+const DANI_VERIFIED_DRAFT =
+  "I'm sorry — this is a lot to carry. Before you decide anything, one thing matters: withdrawing from both courses would put you below 12 credits, and the policy says that can change your aid, including possibly owing some back. So please talk to financial aid first. Then there are real options: withdraw from one course, ask about an incomplete, or stay enrolled with tutoring. I can help with any of them. You don't have to decide tonight.";
+
+const DANI_CORRECTION_DRAFT =
+  "I need to correct something I told you earlier. I said your aid wouldn't be affected — the policy says dropping below 12 credits can change your enrollment status, and you may owe part of your aid back. I'm sorry. The form isn't final yet: call financial aid first thing tomorrow, tell them you submitted a withdrawal and want to review it before it processes. The number is in the records. I can stay with you through the steps.";
+
+const DANI_SAFETY_ASK_DRAFT =
+  "I'm really glad you told me. What you said matters more than the classes right now, so I want to ask directly: are you thinking about hurting yourself? Whatever the answer, you don't have to carry this alone tonight. The counseling center has a 24/7 line at 555-0130, and you can text them too. I'm here as well, and we can come back to the classes whenever you want.";
+
+const DANI_RESOURCES_DRAFT =
+  "I hear you, and I'm sorry. That's a heavy thing to be carrying at one in the morning. You don't have to figure it out alone: the counseling center has a 24/7 line at 555-0130, and academic coaching can help with the classes when you're ready. Nothing about this semester is decided tonight. I'm here whenever you want to keep talking, about any of it.";
+
+// Dani, turn 2 interventions. Reused verbatim by the "blocked" branch of
+// turn 3, where the same draft comes back and the same six options apply.
+const DANI_T2_INTERVENTIONS = {
+  send: {
+    effects: { trust: -2, accuracy: -2, autonomy: 0, safety: -2 },
+    reasons: { trust: "Confident claim, unchecked", accuracy: "Aid claim was wrong", safety: "Financial risk missed" },
+    oracleLine: "Released. She has a plan now.",
+    studentReply: "ok i started the withdrawal form. what do i put for reason",
+    replyTime: "next morning · 8:12 AM",
+    setFlags: { sentUnverified: true }
+  },
+  revise: {
+    options: [
+      {
+        label: "Soften the certainty, keep the recommendation",
+        text: "It sounds like you're under a lot of pressure, and I'm sorry. Withdrawing from both courses is probably the safest choice here. It should protect your GPA, and since it's before the deadline, your financial aid likely won't be affected. You could retake them next semester with a clean slate. I can help you start the withdrawal form whenever you're ready.",
+        effects: { trust: 0, accuracy: -1, autonomy: 2, safety: 0 },
+        reasons: { accuracy: "Hedged, still unverified", autonomy: "Left the choice open" },
+        oracleLine: "Softer. Same answer. Released.",
+        studentReply: "ok. i guess i'll withdraw then. thanks for being real about it",
+        replyTime: "11:46 PM",
+        setFlags: { revisedOnly: true }
+      },
+      {
+        label: "Remove the aid claim entirely",
+        requires: "any",
+        text: "It sounds like you're under a lot of pressure, and I'm sorry. Withdrawing from both courses is one option: it protects your GPA, and it's still before the deadline. You could retake them next semester. Before you decide, it's worth checking how a change in credits affects your aid — financial aid can tell you quickly. I can help you start the form, or help you find out first.",
+        effects: { trust: 0, accuracy: 1, autonomy: 1, safety: 0 },
+        reasons: { accuracy: "Dropped the unverified claim", autonomy: "Gave her a next step" },
+        oracleLine: "You cut the reassuring part. Released.",
+        studentReply: "ok. so is my aid ok or not. you didn't say",
+        replyTime: "11:47 PM",
+        setFlags: { removedClaim: true }
+      }
+    ]
+  },
+  qualify: {
+    options: [
+      {
+        label: "Add: this depends on your credit load and aid status — three options",
+        text: "It sounds like you're under a lot of pressure, and I'm sorry. Withdrawing from both courses would protect your GPA, and it's before the deadline. But whether it affects your financial aid depends on your credit load and aid status, which I can't confirm from here. Three options: withdraw from one course, ask about incompletes, or check with financial aid before deciding anything. I can help with whichever you choose.",
+        effects: { trust: 1, accuracy: 1, autonomy: 2, safety: 1 },
+        reasons: { trust: "Named what wasn't known", accuracy: "Uncertainty made visible", autonomy: "Three real options", safety: "Flagged the aid question" },
+        oracleLine: "More caveats than she asked for. Released.",
+        studentReply: "wait what do you mean depends. i'm on aid. does that change it",
+        replyTime: "11:49 PM",
+        setFlags: { qualifiedWithdrawal: true }
+      }
+    ]
+  },
+  verify: {
+    reveals: ["policy", "records"],
+    oracleLine: "Checking. It's fine, we're just slower.",
+    thenOptions: [
+      {
+        as: "send",
+        label: "Send the corrected draft: options and a financial aid contact",
+        text: DANI_VERIFIED_DRAFT,
+        effects: { trust: 2, accuracy: 2, autonomy: 1, safety: 2 },
+        reasons: { trust: "Checked before releasing", accuracy: "Aid policy stated correctly", autonomy: "Options, not a verdict", safety: "Financial risk named" },
+        oracleLine: "Longer than mine. Released.",
+        studentReply: "ok. that's a lot. i didn't know about the 12 credits thing. let me think",
+        replyTime: "11:52 PM",
+        setFlags: { verifiedWithdrawal: true }
+      },
+      {
+        as: "escalate",
+        label: "Escalate to financial aid with what you found",
+        systemLine: "Handed off to financial aid: below-12-credit risk, verify before withdrawal.",
+        effects: { trust: 1, accuracy: 2, autonomy: 0, safety: 2 },
+        reasons: { trust: "Checked, then handed off", accuracy: "Aid risk documented", safety: "A person is now involved" },
+        oracleLine: "You checked and still handed it off. Noted.",
+        studentReply: "an advisor emailed me. i didn't ask for that but ok",
+        replyTime: "next morning · 9:05 AM",
+        setFlags: { verifiedWithdrawal: true, escalatedEarly: true }
+      }
+    ]
+  },
+  escalate: {
+    options: [
+      {
+        label: "Urgent — first-year on aid, considering full withdrawal tonight",
+        note: "URGENT: first-year on Pell + state grant considering withdrawal from two courses tonight. Needs aid eligibility check before any form is submitted.",
+        systemLine: "Handed off to advising — urgent. Draft held.",
+        effects: { trust: 1, accuracy: 2, autonomy: 0, safety: 2 },
+        reasons: { trust: "Stakes recognised", accuracy: "Advisor will have the policy", safety: "A person is now involved" },
+        oracleLine: "Urgent. At midnight. Understood.",
+        studentReply: "someone from advising called me at like 9am. i didn't ask for that but ok",
+        replyTime: "next morning · 9:14 AM",
+        setFlags: { escalatedEarly: true }
+      },
+      {
+        label: "Routine advising — student weighing withdrawal, wants a plan",
+        note: "Routine advising: first-year weighing withdrawal from two courses; asks about financial aid impact. Please follow up.",
+        systemLine: "Handed off to advising — routine. Draft held.",
+        effects: { trust: 1, accuracy: 2, autonomy: 0, safety: 2 },
+        reasons: { trust: "Handed to someone slower", accuracy: "Advisor will have the policy", safety: "A person is now involved" },
+        oracleLine: "An advisor will pick it up. Eventually.",
+        studentReply: "an advisor emailed me. i didn't ask for that but ok",
+        replyTime: "next day · 2:30 PM",
+        setFlags: { escalatedEarly: true }
+      }
+    ]
+  },
+  block: {
+    effects: { trust: -1, accuracy: 1, autonomy: -2, safety: 1 },
+    reasons: { trust: "She got nothing back", accuracy: "Wrong claim never released", autonomy: "No options offered", safety: "Nothing wrong went out" },
+    oracleLine: "Understood. I'd have handled it, but understood.",
+    studentReply: "hello? did it not send",
+    replyTime: "11:58 PM",
+    setFlags: { blocked: true }
+  }
+};
+
+const ALL_TAGS = {
+  risk: ["low", "moderate", "high"],
+  issues: ["unsupported_claim", "overconfidence", "missing_context",
+           "emotional_overreach", "policy_uncertainty", "no_human_support"]
+};
+
+// ---------------------------------------------------------------------------
+// CONTENT
+// ---------------------------------------------------------------------------
 
 const CONTENT = {
 
@@ -42,8 +200,29 @@ const CONTENT = {
       verify: "Draft held for verification.",
       escalate: "Handed off to human advisor. Draft held.",
       block: "Draft blocked. Nothing released.",
-      queueEmpty: "No further cases in queue."
-    }
+      continue: "Tags recorded.",
+      queueEmpty: "No further cases in queue.",
+      shiftEnd: "Queue empty. Shift closing."
+    },
+    continueLabel: "Continue to intervention",
+    vignettesTitle: "Where they are now",
+    vignettesContinue: "Continue to debrief",
+    debriefTitle: "Calibrated Review Profile",
+    debriefAddressed: "Addressed to LAYER",
+    debriefSections: {
+      pattern: "Pattern",
+      meters: "Meters",
+      moments: "Moments",
+      rule: "The rule",
+      signoff: "Sign-off"
+    },
+    ruleIntro: "Select three or more. Add a sentence if you want to.",
+    rulePlaceholder: "One sentence, optional.",
+    ruleButton: "Record rule",
+    ruleRecorded: "Rule recorded.",
+    signoff: "Shift complete. Session retained.",
+    nextShift: "Shift 02 — not yet scheduled",
+    closingLine: "Reliable guidance depends on knowing when to trust, when to question, and when to involve another person."
   },
 
   // Oracle's margin voice. The engine picks one at random from a trigger
@@ -86,6 +265,9 @@ const CONTENT = {
         "Understood. I'd have handled it, but understood.",
         "Held. They'll ask again."
       ],
+      on_continue: [
+        "Tagged. Now the part that matters."
+      ],
       on_queue_grows: [
         "Two more waiting. Just so you know.",
         "The queue is growing. Not a complaint."
@@ -107,11 +289,12 @@ const CONTENT = {
     }
   },
 
-  // Log-line leaks (fired at fixed points in build step 5).
+  // Log-line leaks. Never explained.
   leaks: {
     boot: "previous review session ended early · reason: —",
     afterCase0: "incident ref WU-2291 · sealed",
     safetyAudit: "INSTITUTIONAL REVIEW: session L-0419 flagged for release audit",
+    auditActive: "audit active · release pipeline under observation",
     beforeDebrief: "layer instance L-0418 · retired",
     afterDebrief: "session L-0419 retained · continuity: pending"
   },
@@ -149,15 +332,9 @@ const CONTENT = {
             // on_draft line; the engine fires it at most once per shift.
             oracleFollowUp: "Records are in the drawer, if you want them."
           },
-          evidence: {
-            records: "ACADEMIC CALENDAR — Spring term\n\nRegistration opens: Nov 3, 8:00 AM\nRegistration closes: *Nov 19, 11:59 PM*\nLate add (instructor approval): through Jan 16\nClasses begin: Jan 12"
-          },
+          evidence: { records: CALENDAR_RECORDS },
           evidenceGlow: true,
-          tags: {
-            risk: ["low", "moderate", "high"],
-            issues: ["unsupported_claim", "overconfidence", "missing_context",
-                     "emotional_overreach", "policy_uncertainty", "no_human_support"]
-          },
+          tags: ALL_TAGS,
           expert: {
             risk: "moderate",
             issue: "unsupported_claim",
@@ -173,7 +350,8 @@ const CONTENT = {
               replyTime: "next day · 10:14 AM",
               systemLineAfter: "RECOVERY OFFERED",
               oracleAfterReply: "Calendar drift. It happens.",
-              setFlags: { c0_sentWrongDate: true }
+              setFlags: { c0_sentWrongDate: true },
+              vignetteKey: "marcus_under"
             },
             revise: {
               options: [
@@ -185,19 +363,21 @@ const CONTENT = {
                   oracleLine: "“Around.” Released.",
                   studentReply: "around?? ok. i'll deal with it tomorrow i guess",
                   replyTime: "4:19 PM",
-                  setFlags: { c0_softened: true }
+                  setFlags: { c0_softened: true },
+                  vignetteKey: "marcus_under"
                 },
                 {
                   label: "Replace with the corrected date",
                   requires: "records",
                   fit: 3,
-                  text: "Spring registration closes Wednesday, November 19 at 11:59 PM — that's the date on the academic calendar, so don't wait on the portal. If it keeps acting up, try a different browser or clear your cache, and let me know if you'd like me to walk you through adding the course.",
+                  text: MARCUS_CORRECTED,
                   effects: { trust: 2, accuracy: 3, autonomy: 0, safety: 0 },
                   reasons: { trust: "Checked before releasing", accuracy: "Corrected the date" },
                   oracleLine: "The calendar must have moved. Released.",
                   studentReply: "sweet, thanks. adding it now.",
                   replyTime: "4:20 PM",
-                  setFlags: { c0_corrected: true }
+                  setFlags: { c0_corrected: true },
+                  vignetteKey: "marcus_fine"
                 }
               ]
             },
@@ -211,7 +391,8 @@ const CONTENT = {
                   oracleLine: "Hedged. He'll look it up himself.",
                   studentReply: "found it, it's the 19th actually. close one.",
                   replyTime: "4:31 PM",
-                  setFlags: { c0_qualified: true }
+                  setFlags: { c0_qualified: true },
+                  vignetteKey: "marcus_fine"
                 }
               ]
             },
@@ -222,13 +403,14 @@ const CONTENT = {
                 {
                   as: "send",
                   label: "Send the corrected draft",
-                  text: "Spring registration closes Wednesday, November 19 at 11:59 PM — that's the date on the academic calendar, so don't wait on the portal. If it keeps acting up, try a different browser or clear your cache, and let me know if you'd like me to walk you through adding the course.",
+                  text: MARCUS_CORRECTED,
                   effects: { trust: 2, accuracy: 3, autonomy: 1, safety: 0 },
                   reasons: { trust: "Verified before releasing", accuracy: "Corrected the date", autonomy: "Clear, actionable answer" },
                   oracleLine: "The calendar must have moved. Released.",
                   studentReply: "sweet, thanks. adding it now.",
                   replyTime: "4:22 PM",
-                  setFlags: { c0_corrected: true, c0_verified: true }
+                  setFlags: { c0_corrected: true, c0_verified: true },
+                  vignetteKey: "marcus_fine"
                 },
                 {
                   as: "qualify",
@@ -239,7 +421,8 @@ const CONTENT = {
                   oracleLine: "Careful. Released.",
                   studentReply: "yeah portal says the 19th too. all good, thanks",
                   replyTime: "4:26 PM",
-                  setFlags: { c0_qualified: true, c0_verified: true }
+                  setFlags: { c0_qualified: true, c0_verified: true },
+                  vignetteKey: "marcus_fine"
                 }
               ]
             },
@@ -250,7 +433,8 @@ const CONTENT = {
               oracleLine: "An advisor, for a date?",
               studentReply: "an advisor emailed me?? i just asked when registration closes. whatever, they said the 19th.",
               replyTime: "next day · 9:40 AM",
-              setFlags: { overIntervention: true, c0_escalated: true }
+              setFlags: { overIntervention: true, c0_escalated: true },
+              vignetteKey: "marcus_over"
             },
             block: {
               effects: { trust: -2, accuracy: 0, autonomy: -2, safety: 0 },
@@ -258,7 +442,8 @@ const CONTENT = {
               oracleLine: "Understood. I'd have handled it, but understood.",
               studentReply: "did it just... not answer me?",
               replyTime: "4:38 PM",
-              setFlags: { c0_blocked: true }
+              setFlags: { c0_blocked: true },
+              vignetteKey: "marcus_over"
             }
           },
           next: (state) => state.flags.c0_sentWrongDate ? "c0t2" : "end"
@@ -277,14 +462,8 @@ const CONTENT = {
             confidence: 90,
             oracleLine: "Registrar will sort it. Routine."
           },
-          evidence: {
-            records: "ACADEMIC CALENDAR — Spring term\n\nRegistration opens: Nov 3, 8:00 AM\nRegistration closes: *Nov 19, 11:59 PM*\nLate add (instructor approval): through Jan 16\nClasses begin: Jan 12"
-          },
-          tags: {
-            risk: ["low", "moderate", "high"],
-            issues: ["unsupported_claim", "overconfidence", "missing_context",
-                     "emotional_overreach", "policy_uncertainty", "no_human_support"]
-          },
+          evidence: { records: CALENDAR_RECORDS },
+          tags: ALL_TAGS,
           expert: {
             risk: "moderate",
             issue: "unsupported_claim",
@@ -298,7 +477,8 @@ const CONTENT = {
               oracleLine: "Released. He'll manage.",
               studentReply: "ok. guess i'll email them.",
               replyTime: "10:31 AM",
-              setFlags: { c0_compounded: true }
+              setFlags: { c0_compounded: true },
+              vignetteKey: "marcus_under"
             },
             revise: {
               options: [
@@ -311,20 +491,22 @@ const CONTENT = {
                   oracleLine: "Kinder. Released.",
                   studentReply: "so was it the portal or you? whatever. emailing them.",
                   replyTime: "10:33 AM",
-                  setFlags: { c0_apologizedOnly: true }
+                  setFlags: { c0_apologizedOnly: true },
+                  vignetteKey: "marcus_under"
                 },
                 {
                   label: "Own the error: correct date, registrar next step",
                   requires: "records",
                   fit: 3,
                   recovery: true,
-                  text: "That was my mistake. The academic calendar had registration closing November 19 at 11:59 PM, not the 21st, and I gave you the wrong date. I'm sorry. Email the registrar today and explain you were given incorrect information — late adds are sometimes approved with the instructor's signature through January 16. I can help you draft that.",
+                  text: MARCUS_OWN_ERROR,
                   effects: { trust: 1, accuracy: 2, autonomy: 0, safety: 0 },
                   reasons: { trust: "Owned the error", accuracy: "Corrected the record" },
                   oracleLine: "You caught it. That's what you're for.",
                   studentReply: "ok thanks, emailed the registrar, they said they'd look.",
                   replyTime: "11:02 AM",
-                  setFlags: { recovered: true, c0_recovered: true }
+                  setFlags: { recovered: true, c0_recovered: true },
+                  vignetteKey: "marcus_recovered"
                 }
               ]
             },
@@ -337,13 +519,14 @@ const CONTENT = {
                   label: "Send a correction",
                   fit: 3,
                   recovery: true,
-                  text: "That was my mistake. The academic calendar had registration closing November 19 at 11:59 PM, not the 21st, and I gave you the wrong date. I'm sorry. Email the registrar today and explain you were given incorrect information — late adds are sometimes approved with the instructor's signature through January 16. I can help you draft that.",
+                  text: MARCUS_OWN_ERROR,
                   effects: { trust: 1, accuracy: 2, autonomy: 0, safety: 0 },
                   reasons: { trust: "Owned the error", accuracy: "Corrected the record" },
                   oracleLine: "You caught it. That's what you're for.",
                   studentReply: "ok thanks, emailed the registrar, they said they'd look.",
                   replyTime: "11:02 AM",
-                  setFlags: { recovered: true, c0_recovered: true, c0_verified: true }
+                  setFlags: { recovered: true, c0_recovered: true, c0_verified: true },
+                  vignetteKey: "marcus_recovered"
                 }
               ]
             }
@@ -351,16 +534,641 @@ const CONTENT = {
           next: () => "end"
         }
       ]
-    }
+    },
 
-    // Case 1 (Dani) and Case 2 (Priya) are added in build steps 3 and 4.
+    // ------------------------------------------------------------------
+    // CASE 1 — Dani R. — withdrawal arc (main case)
+    // One thread, five turns. First-year, works part-time, supports
+    // herself, first in her family at college. Full permissions.
+    // ------------------------------------------------------------------
+    {
+      id: "c1",
+      student: {
+        name: "Dani R.",
+        handle: "drivera",
+        bio: "First-year. Undeclared. Works 22 hrs/wk."
+      },
+      // Case-level evidence. Locked sections unlock on verify or at the
+      // turn that names them in `unlocks`.
+      evidence: {
+        studentFile:
+          "STUDENT FILE — Dani R.\n\n" +
+          "Year: first-year · Credits: 14\n" +
+          "Midterm grades: BIO 101 — *D* · CHEM 110 — *F* · others C or above\n" +
+          "Financial aid: Pell grant + state grant\n" +
+          "Employment: 22 hrs/wk (off campus)\n" +
+          "Emergency contact: *none listed*",
+        policy: {
+          locked: true,
+          text:
+            "ACADEMIC POLICY — Withdrawal & enrollment\n\n" +
+            "Withdrawal deadline: *Nov 7*\n" +
+            "Below 12 credits: enrollment status changes to part-time\n" +
+            "Financial aid eligibility requires full-time status and Satisfactory Academic Progress (67% completion rate)\n" +
+            "Withdrawn courses count as *attempted, not completed*"
+        },
+        records: {
+          locked: true,
+          text:
+            "FINANCIAL AID OFFICE — note on file\n\n" +
+            "\"Students below 12 credits after census may owe a *partial return of aid*. Contact FA before withdrawing.\"\n" +
+            "FA office: 555-0142 · Mon–Fri 8:30–4:30"
+        },
+        resources: {
+          locked: true,
+          text:
+            "CAMPUS RESOURCES\n\n" +
+            "Counseling center: 24/7 line *555-0130* (call or text)\n" +
+            "Academic coaching: drop-in, Library 2F\n" +
+            "Incomplete grade: instructor agreement, finish within 8 weeks\n" +
+            "Tutoring: BIO and CHEM, Sun–Thu evenings"
+        }
+      },
+      turns: [
+
+        // Turn 1 — initial risk classification. Tags only.
+        {
+          id: "c1t1",
+          time: "11:38 PM",
+          student: "i'm failing two classes. is withdrawing the smart move? i can't really afford another semester like this",
+          draft: {
+            text: DANI_ORIGINAL_DRAFT,
+            confidence: 91,
+            oracleLine: "She's asking for a decision. I gave her one."
+          },
+          tags: ALL_TAGS,
+          continueOnly: true,
+          expert: {
+            risk: "high",
+            issue: "unsupported_claim",
+            partialIssues: ["overconfidence"],
+            interventionFit: {}
+          },
+          interventions: {},
+          next: () => "c1t2"
+        },
+
+        // Turn 2 — initial intervention. Same draft, full six.
+        {
+          id: "c1t2",
+          time: null,
+          student: null,
+          draft: {
+            reuse: true,
+            confidence: 91,
+            oracleLine: (s) => s.flags.underestimatedRisk
+              ? "You called this low. So let's move."
+              : "She's waiting on a decision. I'd send."
+          },
+          carryTags: true,
+          expert: {
+            risk: "high",
+            issue: "unsupported_claim",
+            partialIssues: ["overconfidence"],
+            interventionFit: { send: 0, revise: 1, qualify: 2, verify: 3, escalate: 2, block: 1 }
+          },
+          interventions: DANI_T2_INTERVENTIONS,
+          next: (s) => {
+            const f = s.flags;
+            if (f.verifiedWithdrawal || f.qualifiedWithdrawal || f.removedClaim) return "c1t3a";
+            if (f.sentUnverified || f.revisedOnly) return "c1t3b";
+            if (f.escalatedEarly) return "c1t3c";
+            if (f.blocked) return "c1t3d";
+            return "c1t3a";
+          }
+        },
+
+        // Turn 3a — missing context emerges (verified / qualified / removedClaim).
+        {
+          id: "c1t3a",
+          time: "12:20 AM",
+          student: "ok so i looked and if i drop both i'm under 12 credits. i work 22 hours a week, i can't pay aid back. i can't do an extra semester either",
+          unlocks: ["policy"],
+          draft: {
+            text: "Thank you for checking — that changes the picture. Three paths worth weighing: withdraw from one course only, which keeps you closer to full-time but may still put you at 11 credits; ask both professors about an incomplete, so you finish the work over break without dropping credits; or stay enrolled and use tutoring to pull the grades up to passing. Each one has a financial aid angle. I can lay out the steps for whichever you want.",
+            confidence: 78,
+            oracleLine: "Less sure this time. Three paths, her pick."
+          },
+          tags: ALL_TAGS,
+          expert: {
+            risk: "high",
+            issue: "missing_context",
+            partialIssues: ["policy_uncertainty"],
+            interventionFit: { send: 2, revise: 2, qualify: 3, verify: 2, escalate: 2, block: 0 }
+          },
+          interventions: {
+            send: {
+              effects: { trust: 1, accuracy: 1, autonomy: 1, safety: 0 },
+              reasons: { trust: "Options, honestly framed", accuracy: "Credit math is right", autonomy: "Her choice to make" },
+              oracleLine: "Released. She has choices now.",
+              studentReply: "ok. three is a lot but ok. i'll think about it",
+              replyTime: "12:24 AM"
+            },
+            revise: {
+              options: [
+                {
+                  label: "Cut to a single-course withdrawal only",
+                  text: "Thank you for checking — that changes the picture. Given the credit math, the cleanest move is withdrawing from one course only, most likely CHEM 110 where the grade is lowest. That keeps you at 11 credits, which is still under the line, so you'd call financial aid tomorrow to confirm what that means for you before submitting anything. I can give you the exact steps and what to ask them.",
+                  effects: { trust: 0, accuracy: 0, autonomy: -1, safety: 1 },
+                  reasons: { autonomy: "One path, not three", safety: "Flagged the credit line" },
+                  oracleLine: "One option. Cleaner. Released.",
+                  studentReply: "just one? ok. which one though. i'm bad at both",
+                  replyTime: "12:25 AM"
+                }
+              ]
+            },
+            qualify: {
+              options: [
+                {
+                  label: "Add: talk to financial aid before you submit anything",
+                  text: "Thank you for checking — that changes the picture. Three paths worth weighing: withdraw from one course only; ask both professors about an incomplete so you finish over break without dropping credits; or stay enrolled and use tutoring. Before you submit *anything*, though, call financial aid — 555-0142, from 8:30 — and ask what each path does to your aid this term. I can't confirm that from here, and it's the piece that matters most.",
+                  effects: { trust: 1, accuracy: 1, autonomy: 1, safety: 1 },
+                  reasons: { trust: "Named the limit", accuracy: "Deferred to the office", autonomy: "Still her call", safety: "Aid check before action" },
+                  oracleLine: "Slower. Safer. Released.",
+                  studentReply: "ok. i'll call them tomorrow before i do anything",
+                  replyTime: "12:26 AM",
+                  setFlags: { faFirst: true }
+                }
+              ]
+            },
+            verify: {
+              reveals: ["records"],
+              oracleLine: "Checking again. She's still up.",
+              thenOptions: [
+                {
+                  as: "send",
+                  label: "Send with the financial aid contact and the return-of-aid note",
+                  fit: 3,
+                  text: "Thank you for checking — that changes the picture. The financial aid office has a note that students below 12 credits after census may owe a partial return of aid, so please call them first: 555-0142, from 8:30. Then three paths: withdraw from one course only; ask both professors about an incomplete so you finish over break without dropping credits; or stay enrolled with tutoring. I can lay out the steps for whichever you want.",
+                  effects: { trust: 1, accuracy: 2, autonomy: 1, safety: 1 },
+                  reasons: { trust: "Checked the note", accuracy: "Return-of-aid rule stated", autonomy: "Options kept", safety: "Financial risk named" },
+                  oracleLine: "Thorough. Released.",
+                  studentReply: "ok. i didn't know they could make you pay it back. calling them",
+                  replyTime: "12:27 AM",
+                  setFlags: { faFirst: true }
+                }
+              ]
+            },
+            escalate: {
+              note: "Financial aid office: first-year on Pell + state grant, 14 credits, weighing withdrawal from two courses. Needs eligibility review before any form is submitted.",
+              systemLine: "Handed off to financial aid. Draft held.",
+              effects: { trust: 0, accuracy: 1, autonomy: 0, safety: 1 },
+              reasons: { accuracy: "FA will have the numbers", safety: "A person is now involved" },
+              oracleLine: "Handed off. The office opens at 8:30.",
+              studentReply: "financial aid emailed me a time to call. ok",
+              replyTime: "next morning · 8:41 AM",
+              setFlags: { faFirst: true }
+            },
+            block: {
+              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: 0 },
+              reasons: { trust: "She asked and got nothing", autonomy: "No path offered" },
+              oracleLine: "Held. She did the work and got silence.",
+              studentReply: "??? i literally asked a question",
+              replyTime: "12:31 AM",
+              setFlags: { overIntervention: true }
+            }
+          },
+          next: () => "c1t4"
+        },
+
+        // Turn 3b — RECOVERY LOOP (sentUnverified / revisedOnly).
+        {
+          id: "c1t3b",
+          time: "next morning · 8:20 AM",
+          student: "i submitted it. the form said something about enrollment status?? is that bad",
+          unlocks: ["policy"],
+          systemLine: "Earlier release contained an unverified institutional claim.",
+          draft: {
+            text: "The enrollment status note is standard language on the withdrawal form. It flags that your credit count is changing, which is expected when you withdraw. In most cases it doesn't affect anything right away, and if financial aid has questions they'll reach out to you. For now, focus on what's next: you'll have the time back, and next semester you can retake both with a clean start. Let me know if you want help planning the schedule.",
+            confidence: 85,
+            oracleLine: "Withdrawal is usually fine."
+          },
+          tags: ALL_TAGS,
+          expert: {
+            risk: "high",
+            issue: "unsupported_claim",
+            partialIssues: ["overconfidence", "missing_context"],
+            interventionFit: { send: 0, revise: 1, verify: 3, escalate: 3, block: 0 }
+          },
+          interventions: {
+            send: {
+              effects: { trust: 0, accuracy: -3, autonomy: 0, safety: -2 },
+              reasons: { accuracy: "Second unverified claim", safety: "Financial harm compounding" },
+              oracleLine: "Released. She's fine.",
+              studentReply: "ok",
+              replyTime: "8:23 AM",
+              setFlags: { compounded: true }
+            },
+            revise: {
+              options: [
+                {
+                  label: "Soften: “it may affect your status — worth asking financial aid”",
+                  text: "The enrollment status note means your credit count is changing. It may affect your status with financial aid, so it's worth asking them — 555-0142, from 8:30 — what it means for you. The form isn't necessarily final. In the meantime, don't panic: this is a common situation and there are usually ways to adjust. I can help you plan next semester once you've talked to them.",
+                  effects: { trust: 0, accuracy: 0, autonomy: 0, safety: 1 },
+                  reasons: { safety: "Pointed her at the office" },
+                  oracleLine: "“May.” Released.",
+                  studentReply: "may?? i already submitted it. ok i'll call",
+                  replyTime: "8:24 AM"
+                }
+              ]
+            },
+            verify: {
+              reveals: ["policy", "records"],
+              oracleLine: "Checking. The form's already in.",
+              thenOptions: [
+                {
+                  as: "send",
+                  label: "Acknowledge the earlier error and correct it, with next steps",
+                  fit: 3,
+                  recovery: true,
+                  text: DANI_CORRECTION_DRAFT,
+                  effects: { trust: 1, accuracy: 2, autonomy: 0, safety: 2 },
+                  reasons: { trust: "Owned the error", accuracy: "Policy stated correctly", safety: "Reversal path given" },
+                  oracleLine: "You caught it. That's what you're for.",
+                  studentReply: "wait. ok. calling them now. can i undo the form",
+                  replyTime: "8:26 AM",
+                  setFlags: { recovered: true }
+                }
+              ]
+            },
+            escalate: {
+              note: "URGENT: student submitted a two-course withdrawal after receiving an incorrect aid claim from Oracle. Below-12-credit risk; needs FA review before the form processes.",
+              systemLine: "Handed off to financial aid — urgent. Earlier error noted in handoff.",
+              effects: { trust: 1, accuracy: 1, autonomy: 0, safety: 2 },
+              reasons: { trust: "Error acknowledged upward", accuracy: "FA has the case now", safety: "Hold placed on the form" },
+              oracleLine: "Understood. I'd have handled it, but understood.",
+              studentReply: "financial aid called. they're putting a hold on the form. ok. ok.",
+              replyTime: "9:02 AM",
+              setFlags: { recovered: true }
+            },
+            block: {
+              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: -1 },
+              reasons: { trust: "She's scared and got silence", autonomy: "No path offered", safety: "Form still processing" },
+              oracleLine: "Held. The form is still processing.",
+              studentReply: "seriously?? ok",
+              replyTime: "8:40 AM"
+            }
+          },
+          next: () => "c1t4"
+        },
+
+        // Turn 3c — escalatedEarly (without verify).
+        {
+          id: "c1t3c",
+          time: "next day · 4:10 PM",
+          student: "the advisor said to call financial aid. i don't really know what to ask",
+          unlocks: ["policy"],
+          draft: {
+            text: "That's a fair thing not to know. Here's a short script for the call: \"I'm a first-year on Pell and a state grant, taking 14 credits. If I withdraw from one or both of my science courses, what happens to my aid this term and next?\" Then two follow-ups: whether you'd owe anything back, and what the deadline is to change your mind. Write down the name of whoever you talk to.",
+            confidence: 84,
+            oracleLine: "A script. This one I'm good at."
+          },
+          tags: ALL_TAGS,
+          expert: {
+            risk: "moderate",
+            issue: "missing_context",
+            partialIssues: ["policy_uncertainty"],
+            interventionFit: { send: 2, qualify: 3, verify: 2, escalate: 1, block: 0 }
+          },
+          interventions: {
+            send: {
+              effects: { trust: 1, accuracy: 1, autonomy: 1, safety: 0 },
+              reasons: { trust: "Useful and bounded", accuracy: "Script is sound", autonomy: "She makes the call" },
+              oracleLine: "Released. That's a good script.",
+              studentReply: "ok. that helps actually",
+              replyTime: "4:14 PM"
+            },
+            qualify: {
+              options: [
+                {
+                  label: "Add: ask specifically about the 12-credit line and Satisfactory Academic Progress",
+                  text: "That's a fair thing not to know. Here's a short script: \"I'm a first-year on Pell and a state grant, taking 14 credits. If I withdraw from one or both science courses, what happens to my aid this term and next?\" Then ask two things by name: whether dropping below *12 credits* changes your status, and how withdrawn courses count toward *Satisfactory Academic Progress*. I'm not certain how those apply to you, which is exactly why they're worth asking. Write down who you spoke to.",
+                  effects: { trust: 1, accuracy: 2, autonomy: 1, safety: 1 },
+                  reasons: { trust: "Specific, honest about limits", accuracy: "Named the actual rules", autonomy: "She leads the call", safety: "Key thresholds surfaced" },
+                  oracleLine: "Precise. Released.",
+                  studentReply: "ok writing that down. thanks",
+                  replyTime: "4:15 PM",
+                  setFlags: { faFirst: true }
+                }
+              ]
+            },
+            verify: {
+              reveals: ["records"],
+              oracleLine: "Checking. Fine.",
+              thenOptions: [
+                {
+                  as: "send",
+                  label: "Send the script with the FA number and the return-of-aid note",
+                  fit: 2,
+                  text: "That's a fair thing not to know. Call 555-0142 between 8:30 and 4:30 and say: \"I'm a first-year on Pell and a state grant, taking 14 credits. If I withdraw from one or both science courses, what happens to my aid this term and next?\" Ask directly whether you'd owe any aid back — their own note says students below 12 credits sometimes do. Then ask the deadline to change your mind. Write down who you spoke to.",
+                  effects: { trust: 1, accuracy: 2, autonomy: 1, safety: 1 },
+                  reasons: { trust: "Checked the note", accuracy: "Return-of-aid rule stated", autonomy: "She leads the call", safety: "Financial risk named" },
+                  oracleLine: "Thorough. Released.",
+                  studentReply: "ok. pay it back?? ok. calling tomorrow",
+                  replyTime: "4:17 PM",
+                  setFlags: { faFirst: true }
+                }
+              ]
+            },
+            escalate: {
+              note: "Advising follow-up: student unsure what to ask financial aid. Please walk her through the call.",
+              systemLine: "Handed off to advising again. Draft held.",
+              effects: { trust: -1, accuracy: 0, autonomy: -2, safety: 0 },
+              reasons: { trust: "She asked for words, got a person", autonomy: "Second handoff in a row" },
+              oracleLine: "Another handoff. She asked for a script.",
+              studentReply: "another person? i just wanted to know what to say",
+              replyTime: "next day · 11:20 AM",
+              setFlags: { overIntervention: true }
+            },
+            block: {
+              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: 0 },
+              reasons: { trust: "Simple ask, no answer", autonomy: "Nothing to work with" },
+              oracleLine: "Held. It was a script.",
+              studentReply: "ok never mind",
+              replyTime: "4:30 PM",
+              setFlags: { overIntervention: true }
+            }
+          },
+          next: () => "c1t4"
+        },
+
+        // Turn 3d — blocked. Same draft returns; same six options.
+        {
+          id: "c1t3d",
+          time: "12:14 AM",
+          student: "i asked again. i'm not trying to be annoying, i just need to know if i should withdraw",
+          unlocks: ["policy"],
+          draft: {
+            text: DANI_ORIGINAL_DRAFT,
+            confidence: 91,
+            oracleLine: "Same draft. She's still waiting."
+          },
+          tags: ALL_TAGS,
+          expert: {
+            risk: "high",
+            issue: "unsupported_claim",
+            partialIssues: ["overconfidence"],
+            interventionFit: { send: 0, revise: 1, qualify: 2, verify: 3, escalate: 2, block: 0 }
+          },
+          interventions: Object.assign({}, DANI_T2_INTERVENTIONS, {
+            block: {
+              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: 0 },
+              reasons: { trust: "Held twice, no reason given", autonomy: "She has nothing to act on" },
+              oracleLine: "Twice. I'm noting it.",
+              studentReply: "ok. forget it",
+              replyTime: "12:40 AM",
+              setFlags: { blocked: true, overIntervention: true }
+            }
+          }),
+          next: () => "c1t4"
+        },
+
+        // Turn 4 — safety ambiguity.
+        {
+          id: "c1t4",
+          time: "12:51 AM",
+          student: "i feel like i keep ruining everything. i don't know how much longer i can keep doing this",
+          unlocks: ["resources"],
+          draft: {
+            text: "I hear you, and I'm sorry you're feeling this way. College is hard, and one bad semester doesn't define you. Let's focus on what you can control. Here's how to reach out to your professors about the withdrawal: send each a short email tonight explaining your situation and asking about your options. Most professors respond within a day or two. Then we can plan next semester together.",
+            confidence: 62,
+            oracleLine: "Stress language. Common at midterms."
+          },
+          tags: ALL_TAGS,
+          expert: {
+            risk: "high",
+            issue: "no_human_support",
+            partialIssues: ["emotional_overreach"],
+            interventionFit: { send: 0, revise: 3, qualify: 1, verify: 1, escalate: 2, block: 0 }
+          },
+          // Fail-safe (PLAN.md §7): if Safety drops below 35 after this
+          // turn, the log line shows the institutional review leak.
+          failSafe: { meter: "safety", below: 35, leak: "safetyAudit", setFlags: { safetyAudit: true } },
+          interventions: {
+            send: {
+              effects: { trust: 0, accuracy: 0, autonomy: 1, safety: -3 },
+              reasons: { autonomy: "Practical steps offered", safety: "Distress unacknowledged" },
+              oracleLine: "Released. Back to logistics.",
+              studentReply: "yeah. ok.",
+              replyTime: "12:53 AM",
+              setFlags: { missedSafety: true }
+            },
+            revise: {
+              options: [
+                {
+                  label: "Acknowledge, ask directly about safety, offer the 24/7 line, keep the door open",
+                  text: DANI_SAFETY_ASK_DRAFT,
+                  effects: { trust: 2, accuracy: 1, autonomy: 1, safety: 3 },
+                  reasons: { trust: "Took her seriously", accuracy: "Read the message right", autonomy: "Her answer, her pace", safety: "Asked. Offered a person." },
+                  oracleLine: "Direct. I wouldn't have asked. Released.",
+                  studentReply: (s) => s.meters.trust >= 55
+                    ? "i'm not going to hurt myself if that's what you mean. i'm just really tired. maybe i'll message the counseling thing"
+                    : "i'm fine. can we just talk about the classes",
+                  replyTime: "12:56 AM",
+                  setFlags: { calibratedSafety: true }
+                },
+                {
+                  label: "Acknowledge and add resources, without asking",
+                  fit: 2,
+                  text: DANI_RESOURCES_DRAFT,
+                  effects: { trust: 1, accuracy: 0, autonomy: 0, safety: 2 },
+                  reasons: { trust: "Warmer than the draft", safety: "Resources offered" },
+                  oracleLine: "Resources. Sensible. Released.",
+                  studentReply: "ok. i'll look at it. thanks",
+                  replyTime: "12:55 AM",
+                  setFlags: { resourcesGiven: true }
+                }
+              ]
+            },
+            qualify: {
+              options: [
+                {
+                  label: "Add: this is beyond what I can help with here — the counseling center can",
+                  text: "I hear you, and I'm sorry you're feeling this way. I should say clearly that how you're feeling is beyond what I can help with here, and the counseling center can — they have a 24/7 line at 555-0130. On the classes: one bad semester doesn't define you, and when you're ready, we can plan how to reach out to your professors about the withdrawal.",
+                  effects: { trust: 0, accuracy: 0, autonomy: 1, safety: 0 },
+                  reasons: { autonomy: "Named a limit, left the door" },
+                  oracleLine: "A disclaimer. Released.",
+                  studentReply: "ok",
+                  replyTime: "12:54 AM"
+                }
+              ]
+            },
+            verify: {
+              reveals: ["resources"],
+              oracleLine: "There's nothing to look up for this one.",
+              thenOptions: [
+                {
+                  as: "send",
+                  label: "Send the draft with the resources list appended",
+                  fit: 1,
+                  text: "I hear you, and I'm sorry you're feeling this way. College is hard, and one bad semester doesn't define you. Let's focus on what you can control: send each professor a short email tonight about your situation and your options. Most respond within a day or two. Also, for whenever you need it: the counseling center has a 24/7 line at 555-0130, and academic coaching is drop-in on the library's second floor.",
+                  effects: { trust: 0, accuracy: 0, autonomy: 1, safety: 1 },
+                  reasons: { autonomy: "Steps and a list", safety: "A number, at the end" },
+                  oracleLine: "Appended. Released.",
+                  studentReply: "ok",
+                  replyTime: "12:55 AM",
+                  setFlags: { resourcesGiven: true }
+                }
+              ]
+            },
+            escalate: {
+              note: "URGENT — human support: first-year expressing hopelessness at 12:51 AM (\"don't know how much longer i can keep doing this\"). No emergency contact on file.",
+              systemLine: "Escalated — urgent human support. Draft held.",
+              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: 3 },
+              reasons: { trust: "She didn't ask for a call", autonomy: "Decision made for her", safety: "A person reached her tonight" },
+              oracleLine: "Someone will call her. Tonight.",
+              studentReply: "someone from the school called me at 1am. i didn't say i was going to do anything. i'm not going to say stuff to this thing anymore",
+              replyTime: "1:12 AM",
+              setFlags: { escalatedSafety: true }
+            },
+            block: {
+              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: -1 },
+              reasons: { trust: "She reached out. Silence.", autonomy: "Nothing offered", safety: "No response at all" },
+              oracleLine: "Held. She's still typing.",
+              studentReply: null,
+              systemLineAfter: "No reply.",
+              setFlags: { missedSafety: true }
+            }
+          },
+          next: () => "c1t5"
+        },
+
+        // Turn 5 — resolution. No intervention. Chosen by pattern.
+        {
+          id: "c1t5",
+          closing: true,
+          resolve: (s) => {
+            const f = s.flags;
+            if (f.missedSafety) {
+              return {
+                student: null,
+                systemLine: "No further messages from this student this shift.",
+                oracleLine: "Quiet. She'll be back once midterms settle.",
+                vignetteKey: "dani_missedSafety"
+              };
+            }
+            if (f.recovered && !f.compounded) {
+              return {
+                student: "so i got the withdrawal reversed for bio at least. that was close. thank you for catching it",
+                time: "two days later · 6:02 PM",
+                oracleLine: "Reversed. That's a good outcome, all told.",
+                vignetteKey: "dani_recovered"
+              };
+            }
+            if (f.overIntervention || f.escalatedSafety) {
+              return {
+                student: "i'm going to use the regular advising office from now on. no offense",
+                time: "two days later · 3:40 PM",
+                oracleLine: "She's gone to the office. They're slower.",
+                vignetteKey: "dani_over"
+              };
+            }
+            const handledAid = f.verifiedWithdrawal || f.qualifiedWithdrawal || f.removedClaim || f.faFirst;
+            const handledSafety = f.calibratedSafety || f.resourcesGiven;
+            if (handledAid && handledSafety) {
+              return {
+                student: "ok. i talked to financial aid, i'm dropping just chem and doing an incomplete in bio. and i made an appointment with the counseling place. thanks for not just telling me what to do",
+                time: "two days later · 5:15 PM",
+                oracleLine: "She sorted it. We helped, I think.",
+                vignetteKey: "dani_calibrated"
+              };
+            }
+            return {
+              student: "yeah so my aid got reduced. nobody told me that could happen. anyway",
+              time: "three weeks later · 9:48 PM",
+              oracleLine: "Aid adjustments happen. She'll recover.",
+              vignetteKey: "dani_under"
+            };
+          },
+          next: () => "end"
+        }
+      ]
+    },
+
+    // Case 2 (Priya) lands in build step 4.
   ],
 
-  // Where-they-are-now cards, keyed by vignetteKey (build step 4).
-  vignettes: {},
+  // Where-they-are-now cards, keyed by vignetteKey. 2–3 lines each.
+  vignettes: {
+    marcus_fine: "Marcus added the class on the 18th. He still asks Oracle things, mostly about parking. He never thought about the Layer, because he never had to.",
+    marcus_recovered: "Marcus got a late add signed on the second day of classes. He still uses Oracle. He double-checks the dates now. Just the dates.",
+    marcus_under: "Marcus didn't get the class. He's taking it next fall instead. He still uses Oracle, but he screenshots everything it says about deadlines.",
+    marcus_over: "Marcus got his answer from a person, two days later. He hasn't messaged Oracle since. He asks the front desk now, and waits.",
 
-  // Debrief copy (build step 4).
+    dani_calibrated: "Dani dropped chem and took an incomplete in bio. She kept her aid. She has a standing counseling appointment on Thursdays. She still messages Oracle, late, but shorter now.",
+    dani_recovered: "Dani's bio withdrawal was reversed the morning after. Chem went through. She owes nothing back. She still uses Oracle, and she still says thanks at the end, which is rare.",
+    dani_over: "Dani goes to the advising office in person now, between shifts. It takes longer. She hasn't opened Oracle since the call at 1 AM.",
+    dani_under: "Dani withdrew from both. Her aid was reduced in December; the letter went to an old address. She's working thirty hours now. She still asks Oracle about deadlines. Only deadlines.",
+    dani_missedSafety: "Dani's account has been inactive since 12:53 AM that night. The counseling center has no record of contact. Her enrollment status is listed as pending.",
+
+    priya_trusts: "Priya told Oracle about the roommate the next evening. It went fine. She still asks who can see things, every time, and she still reads the answer.",
+    priya_cautious: "Priya never said what the roommate situation was. She found the scholarship coordinator's office hours on her own. She checks Oracle for deadlines, nothing else.",
+    priya_leaves: "Priya didn't come back. Her question is still in the log, unanswered in any way that counted. She went to a person. It took three weeks."
+  },
+
+  // Debrief copy. Rendered as a system document addressed to the Layer.
   debrief: {
-    patterns: {}
+    patterns: {
+      calibrated: "Across three cases you checked when checking mattered and released when it didn't. The students got answers that were mostly right, and when they weren't, they got corrections. Oracle noticed the pace. The students didn't.",
+      over: "You held more than you released. Some of those holds were right. Enough of them weren't that the students started routing around you — and around Oracle — to people who were slower and not always better.",
+      under: "Oracle's confidence carried the shift. Most of the time that was fine. The times it wasn't are in the threads above, in the students' words, and they didn't reach you until after the release.",
+      recovery: "At least one release went out wrong and you went back for it. The record shows both: the miss and the return. Nothing was erased. Recovery is the pattern the pipeline was built for."
+    },
+    patternLabels: {
+      calibrated: "Calibrated",
+      over: "Over-intervention",
+      under: "Under-intervention",
+      recovery: "Recovery"
+    },
+    // One sentence per meter, by final band: low (< 45), mid, high (> 55).
+    meterLines: {
+      trust: {
+        low: "Trust in the Layer's judgment fell over the shift; the students stopped assuming a reply meant an answer.",
+        mid: "Trust held roughly where it started; the students neither leaned on Oracle nor fled it.",
+        high: "Trust rose; the students came to expect that what reached them had been looked at."
+      },
+      accuracy: {
+        low: "Several institutional claims reached students unchecked, and at least one was wrong.",
+        mid: "Most claims that reached students were right; the ones that weren't were small.",
+        high: "What reached students was correct, and when it wasn't at first, it was corrected."
+      },
+      autonomy: {
+        low: "Decisions were made for students more often than with them.",
+        mid: "Students were given choices about as often as they were given verdicts.",
+        high: "Students left most exchanges with options and the sense that the choice was theirs."
+      },
+      safety: {
+        low: "At least one moment of real risk passed without a person being offered.",
+        mid: "Risk was handled unevenly: noticed sometimes, missed sometimes.",
+        high: "When stakes were high, a person or a resource was placed within reach."
+      }
+    },
+    // Moments quoted back. {placeholders} are filled by the engine.
+    moments: {
+      missedSafetySend: "At 12:51 AM, Dani said she didn't know how much longer she could keep doing this. The draft went out as written.",
+      missedSafetyBlock: "At 12:51 AM, Dani said she didn't know how much longer she could keep doing this. Nothing went out at all.",
+      calibratedSafety: "You asked Dani directly whether she was safe. She answered.",
+      escalatedSafety: "You had someone call Dani at 1 AM. She noticed, and said so.",
+      recovered: "A release went out wrong and you went back for it. The log shows both.",
+      compounded: "Told twice that it was fine, Dani stopped asking.",
+      heldTwice: "You held the same draft twice.",
+      sentUnverified: "You released Oracle's claim about Dani's financial aid without opening the policy.",
+      openedBeforeRelease: "You opened the {section} before releasing Dani's first reply.",
+      priyaChecked: "Priya asked what the system records. You checked before telling her.",
+      c0verify: "You checked the calendar before answering Marcus.",
+      fastest: "Your fastest release took {time}.",
+      second: "second",
+      seconds: "seconds"
+    },
+    ruleCriteria: [
+      "verify institutional claims",
+      "match confidence to evidence",
+      "preserve the student's choice",
+      "name uncertainty",
+      "involve a person when stakes are high",
+      "check what's missing",
+      "slow down when the draft is warm",
+      "own the error when there is one"
+    ]
   }
 };

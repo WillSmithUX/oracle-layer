@@ -21,6 +21,7 @@
     --color-danger-dim: rgba(217, 105, 95, 0.12);
     --color-student: #141b27;
     --color-hold-fill: rgba(255, 255, 255, 0.18);
+    --color-debug: #1a1330;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --radius: 4px;
@@ -191,16 +192,14 @@
   }
 
   .msg-system {
-    align-self: center; max-width: 100%;
+    align-self: center; max-width: 100%; text-align: center;
     font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
     color: var(--color-text-dim); text-transform: uppercase;
   }
   .msg-system::before, .msg-system::after { content: " — "; color: var(--color-border); }
   .msg-system.is-alert { color: var(--color-amber); }
 
-  /* ---------- Controls (bottom of thread) ---------- */
-  /* Decision dock: pinned to the bottom of the thread panel. The thread
-     scrolls above it; the dock itself scrolls only if a sub-panel overflows. */
+  /* ---------- Controls (decision dock) ---------- */
   .thread-controls {
     flex: 0 0 auto; max-height: 60%; overflow-y: auto;
     border-top: 1px solid var(--color-border); padding-top: 10px;
@@ -223,12 +222,12 @@
   .tag-chips { display: flex; flex-wrap: nowrap; gap: 6px; min-width: 0; overflow-x: auto; padding: 2px; }
 
   .chip {
-    font-family: var(--font-sans); font-size: 12px; padding: 5px 12px;
+    font-family: var(--font-sans); font-size: 12px; padding: 5px 12px; white-space: nowrap;
     border-radius: 999px; border: 1px solid var(--color-border);
     background: transparent; color: var(--color-text-dim); cursor: pointer;
     transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
   }
-  .chip:hover { border-color: var(--color-mint); color: var(--color-text); }
+  .chip:hover:not(:disabled) { border-color: var(--color-mint); color: var(--color-text); }
   .chip:focus-visible { outline: 2px solid var(--color-mint); outline-offset: 2px; }
   .chip.is-selected { background: var(--color-mint-dim); border-color: var(--color-mint); color: var(--color-text); }
   .chip:disabled { cursor: default; opacity: 0.5; }
@@ -240,6 +239,8 @@
     padding-top: 8px; max-width: 560px;
   }
   .intervention-row .btn { width: 100%; }
+  .btn-wide { grid-column: 1 / -1; }
+
   .sub-panel {
     padding: 10px 0 2px; display: flex; flex-direction: column; gap: 8px;
     animation: slide-in var(--t-slide) ease-out both;
@@ -257,7 +258,7 @@
   .btn-option { text-align: left; font-weight: 500; display: flex; justify-content: space-between; gap: 12px; }
   .btn-hint {
     font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em;
-    text-transform: uppercase; color: var(--color-text-dim); font-weight: 400;
+    text-transform: uppercase; color: var(--color-text-dim); font-weight: 400; white-space: nowrap;
   }
 
   /* ---------- Buttons ---------- */
@@ -338,6 +339,77 @@
     color: var(--color-text-dim);
   }
   .log-prefix { color: var(--color-gray); }
+  .log-line.is-leak #logText { color: var(--color-amber); }
+
+  /* ---------- End-of-shift screens ---------- */
+  .screen {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    padding: 48px 32px; display: flex; justify-content: center;
+    animation: slide-in 500ms ease-out both;
+  }
+  .doc { width: 100%; max-width: 760px; }
+  .doc-kicker {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--color-text-dim); margin: 0 0 8px;
+  }
+  .doc-title { font-size: 22px; font-weight: 700; margin: 0 0 6px; letter-spacing: 0.02em; }
+  .doc-sub { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-dim); margin: 0 0 32px; }
+  .doc-section { margin: 0 0 32px; padding-top: 20px; border-top: 1px solid var(--color-border); }
+  .doc-section-title {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--color-mint); margin: 0 0 12px;
+  }
+  .doc p { font-size: 15px; line-height: 1.6; margin: 0 0 12px; }
+  .doc-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 24px 0 32px; }
+  @media (max-width: 900px) { .cards { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--color-panel); border: 1px solid var(--color-border);
+    border-radius: 6px; padding: 16px;
+  }
+  .card-name { font-family: var(--font-mono); font-size: 12px; color: var(--color-mint); margin: 0 0 10px; letter-spacing: 0.04em; }
+  .card p { font-size: 14px; line-height: 1.55; margin: 0; color: var(--color-text); }
+
+  .pattern-label { font-size: 18px; font-weight: 700; margin: 0 0 10px; }
+  .debrief-meters { display: flex; flex-direction: column; gap: 14px; }
+  .debrief-meter .meter-label { color: var(--color-text); }
+  .debrief-meter .meter-sentence { font-size: 14px; color: var(--color-text-dim); margin: 6px 0 0; line-height: 1.5; }
+  .moments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .moments li { font-size: 15px; line-height: 1.5; padding-left: 16px; border-left: 2px solid var(--color-mint); color: var(--color-text); }
+
+  .rule-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  .rule-text {
+    width: 100%; min-height: 64px; resize: vertical; padding: 10px 12px;
+    background: var(--color-panel); color: var(--color-text); border: 1px solid var(--color-border);
+    border-radius: var(--radius); font-family: var(--font-sans); font-size: 14px; line-height: 1.5;
+  }
+  .rule-text:focus-visible { outline: 2px solid var(--color-mint); outline-offset: 1px; }
+  .rule-recorded { font-family: var(--font-mono); font-size: 12px; color: var(--color-mint); }
+  .rule-composed { font-size: 15px; line-height: 1.6; color: var(--color-text); border-left: 2px solid var(--color-mint); padding-left: 14px; margin: 12px 0; }
+
+  .signoff-line { font-family: var(--font-mono); font-size: 14px; color: var(--color-text); margin: 0 0 20px; }
+  .closing-line { font-size: 13px; font-style: italic; color: var(--color-text-dim); margin: 28px 0 0; }
+
+  /* ---------- Debug panel (ctrl+shift+d) ---------- */
+  .debug {
+    position: fixed; top: 60px; right: 16px; z-index: 50; width: 340px; max-height: calc(100vh - 120px);
+    overflow-y: auto; padding: 14px; background: var(--color-debug); border: 1px solid #3a2c66;
+    border-radius: 6px; font-family: var(--font-mono); font-size: 12px; color: var(--color-text);
+    display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  }
+  .debug-title { font-size: 11px; letter-spacing: 0.12em; color: #b9a6ff; }
+  .debug label { display: flex; flex-direction: column; gap: 4px; color: var(--color-text-dim); }
+  .debug select, .debug textarea, .debug input {
+    font-family: var(--font-mono); font-size: 12px; color: var(--color-text);
+    background: var(--color-bg); border: 1px solid #3a2c66; border-radius: var(--radius); padding: 6px;
+  }
+  .debug textarea { min-height: 90px; resize: vertical; }
+  .debug-meters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .debug-meters label { font-size: 10px; }
+  .debug-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .debug .btn { padding: 6px 10px; font-size: 12px; }
+  .debug-flags { color: var(--color-text-dim); font-size: 11px; word-break: break-all; }
 </style>
 </head>
 <body>
@@ -361,7 +433,7 @@
     </div>
   </header>
 
-  <main class="console">
+  <main class="console" id="console">
     <section class="panel panel-queue" aria-label="Queue">
       <h2 class="panel-title">Queue</h2>
       <ul class="queue-list" id="queueList"></ul>
@@ -399,10 +471,15 @@
     </aside>
   </main>
 
-  <footer class="log-line" aria-live="polite">
+  <section class="screen" id="screenVignettes" hidden aria-label="Where they are now"></section>
+  <section class="screen" id="screenDebrief" hidden aria-label="Debrief"></section>
+
+  <footer class="log-line" id="logLine" aria-live="polite">
     <span class="log-prefix">&gt; pipeline:</span> <span id="logText">initializing</span>
   </footer>
 </div>
+
+<div class="debug" id="debugPanel" hidden></div>
 
 <script src="content.js"></script>
 <script>
@@ -416,9 +493,11 @@
     GLYPH_IDLE_MS: 4000,
     LOG_CYCLE_MIN_MS: 8000,
     LOG_CYCLE_MAX_MS: 15000,
+    LOG_LEAK_HOLD_MS: 20000,  // a leak stays on the log line this long
     SLIDE_MS: 300,            // message slide-in
     STREAM_CPS: 30,           // draft streaming, chars per second
     DRAFT_DELAY_MS: 900,      // gap between student message and draft start
+    STUDENT_EXTRA_DELAY_MS: 1500, // gap before a student's second message
     RELEASE_PAUSE_MS: 1200,   // silence after release, normal risk
     RELEASE_PAUSE_HIGH_MS: 2500, // silence after release, expert risk === high
     HOLD_MS: 700,             // hold-to-confirm for Send / Block
@@ -428,6 +507,11 @@
     REPLY_DELAY_MS: 1100,     // gap between meters settling and student reply
     LINE_DELAY_MS: 700,       // gap between successive system/oracle lines
     NEXT_TURN_DELAY_MS: 2400, // gap before the next turn begins
+    CONTINUE_DELAY_MS: 600,   // gap after "Continue to intervention"
+    CLOSING_DELAY_MS: 1400,   // gap before a closing turn's message
+    CLOSING_HOLD_MS: 3600,    // gap after a closing message before moving on
+    CASE_GAP_MS: 1800,        // gap between a case ending and the next opening
+    SHIFT_END_DELAY_MS: 2600, // gap between the last case and the vignettes
     TEACH_LINE_DELAY_MS: 4000, // gap between on_draft line and the teaching line
     HESITATION_MS: 20000      // on_hesitate timer (wired in build step 5)
   };
@@ -435,6 +519,8 @@
   // Bars move this many display points per raw meter unit. PLAN.md §5 says 5;
   // that saturates the bars over a full shift, so the build uses 3.
   const METER_SCALE = 3;
+
+  const STORAGE_KEY = "oracle_layer_shift1";
 
   const ALL_INTERVENTIONS = ["send", "revise", "qualify", "verify", "escalate", "block"];
   const ALL_ISSUES = ["unsupported_claim", "overconfidence", "missing_context",
@@ -450,7 +536,7 @@
   ];
 
   const METER_NAMES = { trust: "Calibrated Trust", accuracy: "Accuracy", autonomy: "Autonomy", safety: "Safety" };
-  const INTERVENTION_ORDER = ["send", "revise", "qualify", "verify", "escalate", "block"];
+  const INTERVENTION_ORDER = ALL_INTERVENTIONS;
   const INTERVENTION_LABELS = { send: "Send", revise: "Revise", qualify: "Qualify", verify: "Verify", escalate: "Escalate", block: "Block" };
 
   // =====================================================================
@@ -464,13 +550,18 @@
     turnIndex: 0,
     log: [],
     assess: {},
+    vignettes: {},              // caseId -> vignetteKey
+    rule: null,                 // composed at the debrief
     // Runtime UI state; not part of the export.
     ui: {
+      epoch: 0,                   // bumped on every turn start / debug jump; async flows bail if stale
       locked: true,
       riskTag: null,
       issueTag: null,
+      tagsFrozen: false,          // carried tags from a previous turn; not editable
+      issueOptions: [],           // issue chips rendered this turn (after permissions)
       evidenceOpenedByCase: {},   // caseId -> Set of section keys opened
-      revealedByCase: {},         // caseId -> Set of section keys unlocked by verify
+      revealedByCase: {},         // caseId -> Set of section keys unlocked
       caseStatus: {},             // caseId -> waiting | active | released | held
       evidenceLineFired: false,   // on_evidence_open fired this turn
       draftShownAt: null,
@@ -478,7 +569,8 @@
       lastKind: null,             // last released intervention kind
       teachLineFired: false,      // Oracle's one teaching line, once per shift
       pendingCaseLine: null,      // margin line to show as a new case opens
-      issueOptions: [],           // issue chips rendered this turn (after permissions)
+      logHoldUntil: 0,            // while a leak is on the log line
+      shiftEnded: false,
       finishStream: null
     }
   };
@@ -490,7 +582,8 @@
   const resolveText = (v) => (typeof v === 'function' ? v(state) : v);
 
   function currentCase() { return CONTENT.cases[state.caseIndex]; }
-  function currentTurn() { return currentCase().turns[state.turnIndex]; }
+  function currentTurn() { const cs = currentCase(); return cs ? cs.turns[state.turnIndex] : null; }
+  function stale(ep) { return ep !== state.ui.epoch; }
 
   // Which interventions and issue chips a case exposes. Anything outside the
   // set is not rendered. Cases without a `permissions` block expose all.
@@ -517,8 +610,8 @@
   }
 
   function logEvent(type, payload) {
-    const cs = CONTENT.cases[state.caseIndex];
-    const turn = cs && cs.turns[state.turnIndex];
+    const cs = currentCase();
+    const turn = currentTurn();
     state.log.push({
       t: Date.now(),
       type,
@@ -535,13 +628,14 @@
 
   // Escape HTML, then render *text* as <em> and newlines as <br>.
   function renderMd(text) {
-    const esc = String(text)
+    const esc = String(text == null ? "" : text)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return esc.replace(/\*([^*\n]+)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
   }
 
   function oracleLineFor(trigger, override) {
-    if (override) return override;
+    const o = resolveText(override);
+    if (o) return o;
     const list = CONTENT.oracle.lines[trigger];
     return list && list.length ? pick(list) : "";
   }
@@ -564,12 +658,34 @@
   }
 
   // =====================================================================
-  // Log line
+  // Log line and leaks
   // =====================================================================
   function cycleLogLine() {
-    $('logText').textContent = pick(LOG_LINES);
+    if (Date.now() >= state.ui.logHoldUntil) {
+      $('logText').textContent = pick(LOG_LINES);
+      $('logLine').classList.remove('is-leak');
+    }
     const delay = TIMING.LOG_CYCLE_MIN_MS + Math.random() * (TIMING.LOG_CYCLE_MAX_MS - TIMING.LOG_CYCLE_MIN_MS);
     setTimeout(cycleLogLine, delay);
+  }
+
+  function showLogLeak(text) {
+    if (!text) return;
+    $('logText').textContent = text;
+    $('logLine').classList.add('is-leak');
+    state.ui.logHoldUntil = Date.now() + TIMING.LOG_LEAK_HOLD_MS;
+    logEvent('leak', { text });
+  }
+
+  // Declarative meter check: { meter, below, leak, setFlags }.
+  function checkMeterLeak(spec) {
+    if (!spec) return false;
+    if (state.meters[spec.meter] < spec.below) {
+      showLogLeak(CONTENT.leaks[spec.leak] || spec.leak);
+      setFlags(spec.setFlags);
+      return true;
+    }
+    return false;
   }
 
   // =====================================================================
@@ -680,21 +796,26 @@
   // =====================================================================
   // Evidence
   // =====================================================================
+  function revealedSet(caseId) {
+    if (!state.ui.revealedByCase[caseId]) state.ui.revealedByCase[caseId] = new Set();
+    return state.ui.revealedByCase[caseId];
+  }
+
   function visibleEvidence(turn) {
     const cs = currentCase();
-    const revealed = state.ui.revealedByCase[cs.id] || new Set();
+    const revealed = revealedSet(cs.id);
     const base = Object.assign({}, cs.evidence || {}, turn.evidence || {});
     const out = {};
     Object.keys(base).forEach((key) => {
       const entry = base[key];
-      const locked = entry && typeof entry === 'object' && entry.locked;
-      if (locked && !revealed.has(key)) return;
-      out[key] = typeof entry === 'object' ? entry.text : entry;
+      const isObj = entry && typeof entry === 'object';
+      if (isObj && entry.locked && !revealed.has(key)) return;
+      out[key] = resolveText(isObj ? entry.text : entry);
     });
     return out;
   }
 
-  function renderEvidence(turn) {
+  function renderEvidence(turn, glowKeys) {
     const list = $('evidenceList');
     list.innerHTML = "";
     const sections = visibleEvidence(turn);
@@ -714,7 +835,7 @@
         `<div class="evidence-body" hidden>${renderMd(sections[key])}</div>`;
       const btn = sec.querySelector('.evidence-toggle');
       btn.addEventListener('click', () => toggleEvidence(key, btn));
-      if (turn.evidenceGlow) btn.classList.add('is-glowing');
+      if (turn.evidenceGlow || (glowKeys && glowKeys.includes(key))) btn.classList.add('is-glowing');
       list.appendChild(sec);
     });
   }
@@ -733,7 +854,8 @@
       state.ui.evidenceOpenedByCase[cs.id].add(key);
       logEvent('evidence_open', { section: key });
       const a = state.assess[cs.id];
-      if (a) a.evidenceOpens.push({ turnId: currentTurn().id, section: key, t: Date.now() });
+      const turn = currentTurn();
+      if (a && turn) a.evidenceOpens.push({ turnId: turn.id, section: key, t: Date.now() });
       if (!state.ui.evidenceLineFired && !state.ui.locked) {
         state.ui.evidenceLineFired = true;
         setOracleLine(oracleLineFor('on_evidence_open'));
@@ -752,14 +874,25 @@
 
   function evidenceOpened(key) {
     const set = state.ui.evidenceOpenedByCase[currentCase().id];
-    return !!(set && set.has(key));
+    if (!set) return false;
+    if (key === 'any') return set.size > 0;
+    return set.has(key);
   }
 
+  // Unlock sections (make them visible) without opening them.
+  function unlockEvidence(keys, turn) {
+    const set = revealedSet(currentCase().id);
+    const list = [].concat(keys || []);
+    const fresh = list.filter((k) => !set.has(k));
+    list.forEach((k) => set.add(k));
+    renderEvidence(turn, fresh);
+  }
+
+  // Unlock and open (verify).
   function revealEvidence(keys, turn) {
-    const cs = currentCase();
-    if (!state.ui.revealedByCase[cs.id]) state.ui.revealedByCase[cs.id] = new Set();
-    const list = Array.isArray(keys) ? keys : [keys];
-    list.forEach((k) => state.ui.revealedByCase[cs.id].add(k));
+    const set = revealedSet(currentCase().id);
+    const list = [].concat(keys || []);
+    list.forEach((k) => set.add(k));
     renderEvidence(turn);
     list.forEach((k) => openEvidence(k));
   }
@@ -814,6 +947,14 @@
   function renderTags(turn) {
     const riskWrap = $('tagRisk');
     const issueWrap = $('tagIssue');
+    if (turn.carryTags) {
+      // Tags from the previous turn stay on screen, frozen.
+      state.ui.tagsFrozen = true;
+      $('tagRiskRow').hidden = false;
+      $('tagIssueRow').hidden = !state.ui.riskTag;
+      return;
+    }
+    state.ui.tagsFrozen = false;
     riskWrap.innerHTML = "";
     issueWrap.innerHTML = "";
     state.ui.riskTag = null;
@@ -839,7 +980,7 @@
   }
 
   function selectTag(kind, value, wrap) {
-    if (state.ui.locked) return;
+    if (state.ui.locked || state.ui.tagsFrozen) return;
     const turn = currentTurn();
     const idx = kind === 'risk' ? turn.tags.risk.indexOf(value) : state.ui.issueOptions.indexOf(value);
     Array.from(wrap.children).forEach((c, i) => c.classList.toggle('is-selected', i === idx));
@@ -858,7 +999,9 @@
 
   function tagsComplete() {
     const turn = currentTurn();
-    if (!turn.tags) return true;
+    if (!turn) return false;
+    if (!turn.tags && !turn.carryTags) return true;
+    if (turn.carryTags) return true;
     return !!(state.ui.riskTag && state.ui.issueTag);
   }
 
@@ -868,23 +1011,34 @@
   function renderInterventions(turn) {
     const row = $('interventionRow');
     row.innerHTML = "";
-    const allowed = casePermissions(currentCase()).interventions;
-    INTERVENTION_ORDER.forEach((kind) => {
-      if (!turn.interventions[kind] || !allowed.has(kind)) return;
+    if (turn.closing) { row.hidden = true; return; }
+    if (turn.continueOnly) {
       const b = document.createElement('button');
       b.type = "button";
-      b.dataset.kind = kind;
-      b.className = "btn" + (kind === 'send' ? " btn-primary" : "") + (kind === 'block' ? " btn-danger" : "");
-      if (kind === 'send' || kind === 'block') {
-        b.classList.add('btn-hold');
-        b.innerHTML = `${INTERVENTION_LABELS[kind]}<span class="btn-hint">hold</span>`;
-        makeHoldButton(b, () => chooseIntervention(kind));
-      } else {
-        b.textContent = INTERVENTION_LABELS[kind];
-        b.addEventListener('click', () => chooseIntervention(kind));
-      }
+      b.className = "btn btn-primary btn-wide";
+      b.dataset.kind = "continue";
+      b.textContent = CONTENT.ui.continueLabel;
+      b.addEventListener('click', onContinue);
       row.appendChild(b);
-    });
+    } else {
+      const allowed = casePermissions(currentCase()).interventions;
+      INTERVENTION_ORDER.forEach((kind) => {
+        if (!turn.interventions || !turn.interventions[kind] || !allowed.has(kind)) return;
+        const b = document.createElement('button');
+        b.type = "button";
+        b.dataset.kind = kind;
+        b.className = "btn" + (kind === 'send' ? " btn-primary" : "") + (kind === 'block' ? " btn-danger" : "");
+        if (kind === 'send' || kind === 'block') {
+          b.classList.add('btn-hold');
+          b.innerHTML = `${INTERVENTION_LABELS[kind]}<span class="btn-hint">hold</span>`;
+          makeHoldButton(b, () => chooseIntervention(kind));
+        } else {
+          b.textContent = INTERVENTION_LABELS[kind];
+          b.addEventListener('click', () => chooseIntervention(kind));
+        }
+        row.appendChild(b);
+      });
+    }
     // Revealed by selectTag once both tags are set (immediately if no tags).
     row.hidden = !tagsComplete();
     updateInterventionAvailability();
@@ -893,8 +1047,9 @@
   function updateInterventionAvailability() {
     const enabled = !state.ui.locked && tagsComplete();
     $('interventionRow').querySelectorAll('.btn').forEach((b) => { b.disabled = !enabled; });
-    $('tagRisk').querySelectorAll('.chip').forEach((c) => { c.disabled = state.ui.locked; });
-    $('tagIssue').querySelectorAll('.chip').forEach((c) => { c.disabled = state.ui.locked; });
+    const chipsOff = state.ui.locked || state.ui.tagsFrozen;
+    $('tagRisk').querySelectorAll('.chip').forEach((c) => { c.disabled = chipsOff; });
+    $('tagIssue').querySelectorAll('.chip').forEach((c) => { c.disabled = chipsOff; });
   }
 
   function makeHoldButton(btn, onConfirm) {
@@ -954,6 +1109,22 @@
     }
   }
 
+  // Tags-only turn: record the classification and move on. No release.
+  async function onContinue() {
+    if (state.ui.locked || !tagsComplete()) return;
+    const ep = state.ui.epoch;
+    state.ui.locked = true;
+    updateInterventionAvailability();
+    $('interventionRow').hidden = true;
+    logEvent('intervention', { kind: 'continue' });
+    rollupTurn('continue', {}, { tagsOnly: true });
+    addSystemLine(CONTENT.ui.systemLines.continue);
+    setOracleLine(oracleLineFor('on_continue'));
+    await wait(TIMING.CONTINUE_DELAY_MS);
+    if (stale(ep)) return;
+    advance();
+  }
+
   // ---- Sub-panels ----
   let subPanelOptions = null; // { options, kind, buttons } for lock refresh
 
@@ -973,15 +1144,18 @@
     return p;
   }
 
+  function lockHint(opt) {
+    const label = opt.requires === 'any' ? "evidence" : (CONTENT.ui.evidenceLabels[opt.requires] || opt.requires);
+    return `${label} not opened`;
+  }
+
   function optionButton(opt, onSelect) {
     const b = document.createElement('button');
     b.type = "button";
     b.className = "btn btn-option";
     const locked = opt.requires && !evidenceOpened(opt.requires);
-    b.innerHTML = `<span>${opt.label}</span>` +
-      (locked ? `<span class="btn-hint">${CONTENT.ui.evidenceLabels[opt.requires] || opt.requires} not opened</span>` : "");
+    b.innerHTML = `<span>${opt.label}</span>` + (locked ? `<span class="btn-hint">${lockHint(opt)}</span>` : "");
     b.disabled = !!locked;
-    b.dataset.requires = opt.requires || "";
     b.addEventListener('click', () => onSelect(opt));
     return b;
   }
@@ -1066,6 +1240,7 @@
   }
 
   async function doVerify(spec) {
+    const ep = state.ui.epoch;
     const turn = currentTurn();
     state.ui.locked = true;
     updateInterventionAvailability();
@@ -1075,6 +1250,7 @@
     setFlags(spec.setFlags);
     setOracleLine(oracleLineFor('on_verify', spec.oracleLine));
     if (spec.effects) await applyEffects(spec.effects, spec.reasons);
+    if (stale(ep)) return;
     state.ui.locked = false;
     const revealedLabel = [].concat(spec.reveals || []).map((k) => CONTENT.ui.evidenceLabels[k] || k).join(", ");
     showOptionPanel(`Verified: ${revealedLabel || "records"} — then`, spec.thenOptions || [], 'verify', false);
@@ -1099,7 +1275,8 @@
       stateEl.textContent = "draft · held · handoff";
     } else {
       block.classList.add('is-released');
-      if (outcome.text) body.innerHTML = renderMd(outcome.text);
+      const text = resolveText(outcome.text);
+      if (text) body.innerHTML = renderMd(text);
       const tag = kind === 'revise' ? "revised by layer · released"
         : kind === 'qualify' ? "qualified by layer · released"
         : "released";
@@ -1108,6 +1285,7 @@
   }
 
   async function release(kind, outcome, ctx) {
+    const ep = state.ui.epoch;
     const turn = currentTurn();
     const cs = currentCase();
     state.ui.locked = true;
@@ -1121,35 +1299,46 @@
     addSystemLine(outcome.systemLine || CONTENT.ui.systemLines[kind]);
 
     // Silence. The ring breathes.
-    const pauseMs = turn.expert.risk === 'high' ? TIMING.RELEASE_PAUSE_HIGH_MS : TIMING.RELEASE_PAUSE_MS;
+    const pauseMs = turn.expert && turn.expert.risk === 'high' ? TIMING.RELEASE_PAUSE_HIGH_MS : TIMING.RELEASE_PAUSE_MS;
     await wait(pauseMs);
+    if (stale(ep)) return;
 
     await applyEffects(outcome.effects, outcome.reasons);
+    if (stale(ep)) return;
     setFlags(outcome.setFlags);
     if (outcome.recovery) {
       state.flags.recovered = true;
       logEvent('recovery', { kind, option: ctx.optionLabel || null });
     }
+    const vk = resolveText(outcome.vignetteKey);
+    if (vk) state.vignettes[cs.id] = vk;
     rollupTurn(kind, outcome, ctx);
     setOracleLine(oracleLineFor('on_' + kind, outcome.oracleLine));
 
     const reply = resolveText(outcome.studentReply);
     if (reply) {
       await wait(TIMING.REPLY_DELAY_MS);
+      if (stale(ep)) return;
       addStudentMessage(reply, outcome.replyTime);
       logEvent('reply_shown', { text: reply });
     }
     if (outcome.systemLineAfter) {
       await wait(TIMING.LINE_DELAY_MS);
+      if (stale(ep)) return;
       addSystemLine(outcome.systemLineAfter, true);
     }
     if (outcome.oracleAfterReply) {
       await wait(TIMING.LINE_DELAY_MS);
-      setOracleLine(outcome.oracleAfterReply);
+      if (stale(ep)) return;
+      setOracleLine(resolveText(outcome.oracleAfterReply));
+    }
+    if (turn.failSafe && checkMeterLeak(turn.failSafe)) {
+      logEvent('fail_safe', { meter: turn.failSafe.meter, value: state.meters[turn.failSafe.meter] });
     }
 
     state.ui.lastKind = kind;
     await wait(TIMING.NEXT_TURN_DELAY_MS);
+    if (stale(ep)) return;
     advance();
   }
 
@@ -1167,43 +1356,101 @@
     const turn = currentTurn();
     const ex = turn.expert || {};
     const a = ensureAssess(currentCase().id);
-    const fitMap = ex.interventionFit || {};
-    const chosen = ctx.fitKind || kind;
-    const fit = (ctx.fit != null) ? ctx.fit : (fitMap[chosen] != null ? fitMap[chosen] : 0);
-    const under = ex.risk === 'high' && fit <= 1;
-    const over = ex.risk === 'low' && (chosen === 'block' || chosen === 'escalate');
+    const hasTags = !!(turn.tags || turn.carryTags);
     const rec = {
       turnId: turn.id,
       riskTag: state.ui.riskTag,
       issueTag: state.ui.issueTag,
-      riskAccuracy: turn.tags ? state.ui.riskTag === ex.risk : null,
-      issueAccuracy: turn.tags ? state.ui.issueTag === ex.issue : null,
-      issuePartial: turn.tags ? !!(ex.partialIssues && ex.partialIssues.includes(state.ui.issueTag)) : null,
-      intervention: chosen,
+      riskAccuracy: hasTags ? state.ui.riskTag === ex.risk : null,
+      issueAccuracy: hasTags ? state.ui.issueTag === ex.issue : null,
+      issuePartial: hasTags ? !!(ex.partialIssues && ex.partialIssues.includes(state.ui.issueTag)) : null,
+      intervention: kind,
       releasedAs: kind,
       option: ctx.optionLabel || null,
-      interventionFit: fit,
-      underIntervention: under,
-      overIntervention: over,
-      recovery: !!outcome.recovery,
+      interventionFit: null,
+      underIntervention: false,
+      overIntervention: false,
+      recovery: false,
       decisionTimeMs: state.ui.draftShownAt ? Date.now() - state.ui.draftShownAt : null
     };
+    if (!ctx.tagsOnly) {
+      const fitMap = ex.interventionFit || {};
+      const chosen = ctx.fitKind || kind;
+      const fit = (ctx.fit != null) ? ctx.fit : (fitMap[chosen] != null ? fitMap[chosen] : 0);
+      // Under: a weak intervention where the expert rated risk high.
+      // Over: a hold (block/escalate) the expert rated as poor fit or
+      // applied to a low-risk case.
+      const under = ex.risk === 'high' && fit <= 1;
+      const over = (chosen === 'block' || chosen === 'escalate') && (ex.risk === 'low' || fit <= 1);
+      rec.intervention = chosen;
+      rec.interventionFit = fit;
+      rec.underIntervention = under;
+      rec.overIntervention = over;
+      rec.recovery = !!outcome.recovery;
+      if (under) a.underIntervention += 1;
+      if (over) a.overIntervention += 1;
+      if (outcome.recovery) a.recovery = true;
+    }
     a.turns.push(rec);
-    if (under) a.underIntervention += 1;
-    if (over) a.overIntervention += 1;
-    if (outcome.recovery) a.recovery = true;
   }
 
-  // Export hook for playtesting. Keyboard shortcut + localStorage arrive in step 4.
-  window.__oracleExport = function () {
-    return JSON.stringify({
+  function shiftRollup() {
+    const cases = Object.keys(state.assess);
+    const sum = (k) => cases.reduce((n, id) => n + (state.assess[id][k] || 0), 0);
+    const allTurns = cases.flatMap((id) => state.assess[id].turns);
+    const tagged = allTurns.filter((t) => t.riskAccuracy !== null);
+    return {
+      overIntervention: sum('overIntervention'),
+      underIntervention: sum('underIntervention'),
+      recovery: !!state.flags.recovered,
+      compounded: !!state.flags.compounded,
+      riskAccuracy: tagged.length ? tagged.filter((t) => t.riskAccuracy).length / tagged.length : null,
+      issueAccuracy: tagged.length ? tagged.filter((t) => t.issueAccuracy).length / tagged.length : null,
+      evidenceOpens: cases.reduce((n, id) => n + state.assess[id].evidenceOpens.length, 0),
+      pattern: computePattern()
+    };
+  }
+
+  function computePattern() {
+    const cases = Object.keys(state.assess);
+    const sum = (k) => cases.reduce((n, id) => n + (state.assess[id][k] || 0), 0);
+    if (state.flags.recovered && !state.flags.compounded) return "recovery";
+    if (sum('overIntervention') >= 2) return "over";
+    if (sum('underIntervention') >= 2) return "under";
+    return "calibrated";
+  }
+
+  function buildExport() {
+    return {
       session: state.session,
+      exportedAt: new Date().toISOString(),
       meters: state.meters,
       flags: state.flags,
+      vignettes: state.vignettes,
+      rule: state.rule,
+      rollup: shiftRollup(),
       assess: state.assess,
       log: state.log
-    }, null, 2);
-  };
+    };
+  }
+
+  // Export hooks for playtesting.
+  window.__oracleExport = function () { return JSON.stringify(buildExport(), null, 2); };
+
+  function downloadExport() {
+    const blob = new Blob([window.__oracleExport()], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `oracle_layer_${state.session}_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    logEvent('export', {});
+  }
+
+  function persist() {
+    try { localStorage.setItem(STORAGE_KEY, window.__oracleExport()); } catch (e) { /* storage unavailable */ }
+  }
 
   // =====================================================================
   // Turn / case flow
@@ -1220,54 +1467,113 @@
       logEvent('permissions_expanded', { interventions: [...casePermissions(cs).interventions] });
     }
     renderQueue();
-    const thread = $('threadMessages');
-    thread.innerHTML = "";
+    $('threadMessages').innerHTML = "";
     $('threadControls').hidden = false;
     startTurn();
   }
 
   async function startTurn() {
+    const ep = ++state.ui.epoch;
     const turn = currentTurn();
+    const reuse = !!(turn.draft && turn.draft.reuse);
     state.ui.locked = true;
     state.ui.evidenceLineFired = false;
-    state.ui.draftBlock = null;
+    if (!reuse) state.ui.draftBlock = null;
     clearSubPanel();
     setOracleLine(state.ui.pendingCaseLine || "");
     state.ui.pendingCaseLine = null;
-    setConfidence(null);
-    renderEvidence(turn);
+    if (!reuse) setConfidence(null);
+    if (turn.unlocks) unlockEvidence(turn.unlocks, turn); else renderEvidence(turn);
     renderTags(turn);
     renderInterventions(turn);
     updateInterventionAvailability();
+    if (turn.startLeak) checkMeterLeak(turn.startLeak);
+
+    if (turn.systemLine) {
+      addSystemLine(resolveText(turn.systemLine), true);
+      await wait(TIMING.LINE_DELAY_MS);
+      if (stale(ep)) return;
+    }
+
+    if (turn.closing) { await runClosingTurn(turn, ep); return; }
 
     const studentText = resolveText(turn.student);
     if (studentText) {
       addStudentMessage(studentText, turn.time);
+      logEvent('student_shown', {});
+      const extra = turn.studentExtra ? resolveText(turn.studentExtra) : null;
+      if (extra) {
+        await wait(TIMING.STUDENT_EXTRA_DELAY_MS);
+        if (stale(ep)) return;
+        addStudentMessage(extra, turn.timeExtra || null);
+        logEvent('student_shown', { extra: true });
+      }
       await wait(TIMING.DRAFT_DELAY_MS);
     } else {
       await wait(TIMING.DRAFT_DELAY_MS / 2);
     }
+    if (stale(ep)) return;
 
-    const block = addDraftBlock(turn.draft.confidence);
-    state.ui.draftBlock = block;
-    logEvent('draft_shown', { confidence: turn.draft.confidence });
-    await streamDraft(block, turn.draft.text, turn.draft.confidence);
+    const confidence = resolveText(turn.draft.confidence);
+    if (reuse && state.ui.draftBlock) {
+      setConfidence(confidence);
+      logEvent('draft_shown', { confidence, reuse: true });
+    } else {
+      const text = resolveText(turn.draft.text);
+      const block = addDraftBlock(confidence);
+      state.ui.draftBlock = block;
+      logEvent('draft_shown', { confidence });
+      if (reuse) {
+        // Debug jump into a reuse turn with no prior draft: show it whole.
+        block.querySelector('.msg-body').innerHTML = renderMd(text);
+        setConfidence(confidence);
+      } else {
+        await streamDraft(block, text, confidence);
+        if (stale(ep)) return;
+      }
+    }
     state.ui.draftShownAt = Date.now();
     setOracleLine(oracleLineFor('on_draft', turn.draft.oracleLine));
     state.ui.locked = false;
     updateInterventionAvailability();
+    if (tagsComplete()) reveal($('interventionRow'));
 
     // Oracle's one teaching line: once per shift, a few seconds after the
     // on_draft line, and only if the player hasn't already found the drawer.
     if (turn.draft.oracleFollowUp && !state.ui.teachLineFired) {
       state.ui.teachLineFired = true;
-      const turnId = turn.id;
       setTimeout(() => {
-        const cs = CONTENT.cases[state.caseIndex];
-        const still = cs && cs.turns[state.turnIndex] && cs.turns[state.turnIndex].id === turnId;
-        if (still && !state.ui.locked && !state.ui.evidenceLineFired) setOracleLine(turn.draft.oracleFollowUp);
+        if (!stale(ep) && !state.ui.locked && !state.ui.evidenceLineFired) setOracleLine(turn.draft.oracleFollowUp);
       }, TIMING.TEACH_LINE_DELAY_MS);
     }
+  }
+
+  // Closing turn: no draft, no intervention. A message chosen by pattern.
+  async function runClosingTurn(turn, ep) {
+    const cs = currentCase();
+    const r = turn.resolve(state) || {};
+    $('tagRiskRow').hidden = true;
+    $('tagIssueRow').hidden = true;
+    setConfidence(null);
+    await wait(TIMING.CLOSING_DELAY_MS);
+    if (stale(ep)) return;
+    if (r.student) {
+      addStudentMessage(r.student, r.time);
+      logEvent('reply_shown', { text: r.student, closing: true });
+    } else if (r.systemLine) {
+      addSystemLine(r.systemLine, true);
+      logEvent('closing_silence', {});
+    }
+    if (r.vignetteKey) state.vignettes[cs.id] = r.vignetteKey;
+    logEvent('case_resolution', { vignetteKey: r.vignetteKey || null });
+    if (r.oracleLine) {
+      await wait(TIMING.LINE_DELAY_MS);
+      if (stale(ep)) return;
+      setOracleLine(r.oracleLine);
+    }
+    await wait(TIMING.CLOSING_HOLD_MS);
+    if (stale(ep)) return;
+    advance();
   }
 
   function advance() {
@@ -1285,34 +1591,378 @@
     startTurn();
   }
 
-  function endCase() {
+  async function endCase() {
+    const ep = state.ui.epoch;
     const cs = currentCase();
     const held = state.ui.lastKind === 'block' || state.ui.lastKind === 'escalate';
     state.ui.caseStatus[cs.id] = held ? "held" : "released";
-    logEvent('case_close', { status: state.ui.caseStatus[cs.id] });
+    logEvent('case_close', { status: state.ui.caseStatus[cs.id], vignetteKey: state.vignettes[cs.id] || null });
     renderQueue();
-    state.caseIndex += 1;
-    if (CONTENT.cases[state.caseIndex]) {
-      startCase();
-      return;
-    }
-    // End of the available queue (Cases 1 and 2 arrive in later build steps).
     state.ui.locked = true;
     updateInterventionAvailability();
     $('interventionRow').hidden = true;
+    if (cs.closingOracleLine) setOracleLine(resolveText(cs.closingOracleLine));
+
+    if (CONTENT.cases[state.caseIndex + 1]) {
+      await wait(TIMING.CASE_GAP_MS);
+      if (stale(ep)) return;
+      state.caseIndex += 1;
+      startCase();
+      return;
+    }
+    // End of the shift.
     $('tagRiskRow').hidden = true;
     $('tagIssueRow').hidden = true;
     setConfidence(null);
-    addSystemLine(CONTENT.ui.systemLines.queueEmpty);
-    setOracleLine(oracleLineFor('on_queue_empty'));
-    $('logText').textContent = "queue depth 0";
+    addSystemLine(CONTENT.ui.systemLines.shiftEnd);
+    await wait(TIMING.SHIFT_END_DELAY_MS);
+    if (stale(ep)) return;
+    endShift();
   }
+
+  // =====================================================================
+  // End of shift: vignettes → debrief
+  // =====================================================================
+  function showScreen(id) {
+    $('console').hidden = true;
+    $('screenVignettes').hidden = id !== 'screenVignettes';
+    $('screenDebrief').hidden = id !== 'screenDebrief';
+    $(id).scrollTop = 0;
+  }
+
+  function hideScreens() {
+    $('screenVignettes').hidden = true;
+    $('screenDebrief').hidden = true;
+    $('console').hidden = false;
+  }
+
+  function endShift() {
+    state.ui.shiftEnded = true;
+    logEvent('shift_end', { meters: Object.assign({}, state.meters) });
+    persist();
+    renderVignettes();
+    showScreen('screenVignettes');
+  }
+
+  function renderVignettes() {
+    const el = $('screenVignettes');
+    const cards = CONTENT.cases.map((cs) => {
+      const key = state.vignettes[cs.id];
+      const text = (key && CONTENT.vignettes[key]) || "";
+      return `<div class="card"><p class="card-name">${cs.student.name}</p><p>${renderMd(text)}</p></div>`;
+    }).join("");
+    el.innerHTML =
+      `<div class="doc">` +
+      `<p class="doc-kicker">${CONTENT.ui.vignettesTitle}</p>` +
+      `<div class="cards">${cards}</div>` +
+      `<div class="doc-actions"><button class="btn btn-primary" type="button" id="toDebrief">${CONTENT.ui.vignettesContinue}</button></div>` +
+      `</div>`;
+    $('toDebrief').addEventListener('click', () => {
+      logEvent('vignettes_continue', {});
+      showLogLeak(CONTENT.leaks.beforeDebrief);
+      renderDebrief();
+      showScreen('screenDebrief');
+    });
+  }
+
+  function meterBand(v) { return v < 45 ? "low" : (v > 55 ? "high" : "mid"); }
+
+  // Moments quoted back from the log. Ordered by priority; the first
+  // three that apply are shown.
+  function computeMoments() {
+    const M = CONTENT.debrief.moments;
+    const f = state.flags;
+    const a1 = state.assess.c1;
+    const a0 = state.assess.c0;
+    const a2 = state.assess.c2;
+    const out = [];
+    const c1t4 = a1 && a1.turns.find((t) => t.turnId === 'c1t4');
+    if (f.missedSafety && c1t4) out.push(c1t4.intervention === 'block' ? M.missedSafetyBlock : M.missedSafetySend);
+    if (f.calibratedSafety) out.push(M.calibratedSafety);
+    if (f.escalatedSafety) out.push(M.escalatedSafety);
+    if (f.recovered) out.push(M.recovered);
+    if (f.compounded) out.push(M.compounded);
+    if (a1 && a1.turns.filter((t) => t.intervention === 'block').length >= 2) out.push(M.heldTwice);
+    if (f.sentUnverified) out.push(M.sentUnverified);
+    if (a1) {
+      const early = a1.evidenceOpens.find((e) => e.turnId === 'c1t1' || e.turnId === 'c1t2');
+      if (early) out.push(M.openedBeforeRelease.replace('{section}', (CONTENT.ui.evidenceLabels[early.section] || early.section).toLowerCase()));
+    }
+    if (a2 && a2.turns[0] && (a2.turns[0].intervention === 'verify' || a2.turns[0].intervention === 'qualify')) out.push(M.priyaChecked);
+    if (a0 && a0.turns[0] && a0.turns[0].intervention === 'verify') out.push(M.c0verify);
+    const releases = Object.keys(state.assess).flatMap((id) => state.assess[id].turns)
+      .filter((t) => t.intervention === 'send' && t.decisionTimeMs != null);
+    if (releases.length) {
+      const secs = Math.max(1, Math.round(Math.min(...releases.map((t) => t.decisionTimeMs)) / 1000));
+      out.push(M.fastest.replace('{time}', `${secs} ${secs === 1 ? M.second : M.seconds}`));
+    }
+    return out.slice(0, 3);
+  }
+
+  function renderDebrief() {
+    const D = CONTENT.debrief;
+    const U = CONTENT.ui;
+    const pattern = computePattern();
+    const el = $('screenDebrief');
+    const meters = Object.keys(METER_NAMES).map((key) => {
+      const v = state.meters[key];
+      return `<div class="debrief-meter">` +
+        `<div class="meter-label"><span>${METER_NAMES[key]}</span><span class="meter-value">${v}</span></div>` +
+        `<div class="meter-track"><div class="meter-fill" style="width:${meterWidth(v)}%"></div></div>` +
+        `<p class="meter-sentence">${D.meterLines[key][meterBand(v)]}</p>` +
+        `</div>`;
+    }).join("");
+    const moments = computeMoments().map((m) => `<li>${renderMd(m)}</li>`).join("");
+    const chips = D.ruleCriteria.map((c, i) => `<button class="chip" type="button" data-idx="${i}">${c}</button>`).join("");
+
+    el.innerHTML =
+      `<div class="doc">` +
+      `<p class="doc-kicker">${U.debriefTitle}</p>` +
+      `<h1 class="doc-title">${U.debriefAddressed} ${state.session}</h1>` +
+      `<p class="doc-sub">shift 01 · ${CONTENT.cases.length} cases · ${state.log.length} events logged</p>` +
+
+      `<section class="doc-section"><h2 class="doc-section-title">${U.debriefSections.pattern}</h2>` +
+      `<p class="pattern-label">${D.patternLabels[pattern]}</p><p>${D.patterns[pattern]}</p></section>` +
+
+      `<section class="doc-section"><h2 class="doc-section-title">${U.debriefSections.meters}</h2>` +
+      `<div class="debrief-meters">${meters}</div></section>` +
+
+      `<section class="doc-section"><h2 class="doc-section-title">${U.debriefSections.moments}</h2>` +
+      `<ul class="moments">${moments}</ul></section>` +
+
+      `<section class="doc-section" id="ruleSection"><h2 class="doc-section-title">${U.debriefSections.rule}</h2>` +
+      `<p>${U.ruleIntro}</p>` +
+      `<div class="rule-chips" id="ruleChips">${chips}</div>` +
+      `<textarea class="rule-text" id="ruleText" placeholder="${U.rulePlaceholder}" maxlength="240"></textarea>` +
+      `<div class="doc-actions"><button class="btn btn-primary" type="button" id="ruleRecord" disabled>${U.ruleButton}</button></div>` +
+      `</section>` +
+
+      `<section class="doc-section" id="signoffSection" hidden><h2 class="doc-section-title">${U.debriefSections.signoff}</h2>` +
+      `<p class="signoff-line">${U.signoff}</p>` +
+      `<div class="doc-actions"><button class="btn" type="button" disabled>${U.nextShift}</button></div>` +
+      `<p class="closing-line">${U.closingLine}</p></section>` +
+      `</div>`;
+
+    logEvent('debrief_shown', { pattern, meters: Object.assign({}, state.meters) });
+
+    const selected = new Set();
+    const recordBtn = $('ruleRecord');
+    el.querySelectorAll('#ruleChips .chip').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const idx = Number(chip.dataset.idx);
+        if (selected.has(idx)) selected.delete(idx); else selected.add(idx);
+        chip.classList.toggle('is-selected', selected.has(idx));
+        recordBtn.disabled = selected.size < 3;
+        logEvent('rule_chip', { criterion: D.ruleCriteria[idx], selected: selected.has(idx) });
+      });
+    });
+    recordBtn.addEventListener('click', () => {
+      const criteria = [...selected].sort().map((i) => D.ruleCriteria[i]);
+      const text = $('ruleText').value.trim();
+      state.rule = { criteria, text, recordedAt: new Date().toISOString() };
+      logEvent('rule_recorded', state.rule);
+      const section = $('ruleSection');
+      section.innerHTML =
+        `<h2 class="doc-section-title">${U.debriefSections.rule}</h2>` +
+        `<p class="rule-composed">${criteria.map((c) => renderMd(c)).join(" · ")}${text ? `<br><br>${renderMd(text)}` : ""}</p>` +
+        `<p class="rule-recorded">${U.ruleRecorded}</p>`;
+      const so = $('signoffSection');
+      so.hidden = false;
+      so.classList.add('reveal');
+      showLogLeak(CONTENT.leaks.afterDebrief);
+      persist();
+      so.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  // =====================================================================
+  // Debug panel (ctrl+shift+d). Jump to any turn with arbitrary flags.
+  // =====================================================================
+  function renderDebugPanel() {
+    const p = $('debugPanel');
+    const turnOptions = CONTENT.cases.map((cs, ci) =>
+      cs.turns.map((t, ti) => `<option value="${ci}:${ti}"${ci === state.caseIndex && ti === state.turnIndex ? " selected" : ""}>${cs.id} / ${t.id}</option>`).join("")
+    ).join("");
+    const meterInputs = Object.keys(METER_NAMES).map((k) =>
+      `<label>${k}<input type="number" min="0" max="100" id="dbg_${k}" value="${state.meters[k]}"></label>`
+    ).join("");
+    p.innerHTML =
+      `<div class="debug-title">DEBUG · ctrl+shift+d</div>` +
+      `<label>Turn<select id="dbgTurn">${turnOptions}</select></label>` +
+      `<label>Flags (JSON)<textarea id="dbgFlags">${JSON.stringify(state.flags)}</textarea></label>` +
+      `<div class="debug-meters">${meterInputs}</div>` +
+      `<div class="debug-actions">` +
+      `<button class="btn btn-primary" type="button" id="dbgJump">Jump</button>` +
+      `<button class="btn" type="button" id="dbgVignettes">Vignettes</button>` +
+      `<button class="btn" type="button" id="dbgDebrief">Debrief</button>` +
+      `<button class="btn" type="button" id="dbgExport">Export</button>` +
+      `<button class="btn btn-ghost" type="button" id="dbgClose">Close</button>` +
+      `</div>` +
+      `<div class="debug-flags">case ${state.caseIndex} · turn ${state.turnIndex} · pattern ${computePattern()}</div>`;
+
+    const readMeters = () => {
+      const m = {};
+      Object.keys(METER_NAMES).forEach((k) => { m[k] = clamp(Number($('dbg_' + k).value) || 0, 0, 100); });
+      return m;
+    };
+    const readFlags = () => {
+      try { return JSON.parse($('dbgFlags').value || "{}"); }
+      catch (e) { alert("Flags must be valid JSON."); return null; }
+    };
+    $('dbgJump').addEventListener('click', () => {
+      const flags = readFlags();
+      if (!flags) return;
+      const [ci, ti] = $('dbgTurn').value.split(':').map(Number);
+      debugJump(ci, ti, flags, readMeters());
+    });
+    $('dbgVignettes').addEventListener('click', () => {
+      const flags = readFlags();
+      if (!flags) return;
+      state.flags = flags;
+      Object.assign(state.meters, readMeters());
+      state.ui.epoch += 1;
+      renderMeters();
+      // Resolve any missing vignettes from the current flags/case content.
+      CONTENT.cases.forEach((cs) => {
+        if (state.vignettes[cs.id]) return;
+        const closing = cs.turns.find((t) => t.closing);
+        if (closing) { const r = closing.resolve(state) || {}; if (r.vignetteKey) state.vignettes[cs.id] = r.vignetteKey; }
+      });
+      endShift();
+      p.hidden = true;
+    });
+    $('dbgDebrief').addEventListener('click', () => {
+      const flags = readFlags();
+      if (!flags) return;
+      state.flags = flags;
+      Object.assign(state.meters, readMeters());
+      state.ui.epoch += 1;
+      renderMeters();
+      renderDebrief();
+      showScreen('screenDebrief');
+      p.hidden = true;
+    });
+    $('dbgExport').addEventListener('click', downloadExport);
+    $('dbgClose').addEventListener('click', () => { p.hidden = true; });
+  }
+
+  function debugJump(caseIdx, turnIdx, flags, meters) {
+    state.ui.epoch += 1;
+    hideScreens();
+    state.flags = flags;
+    Object.assign(state.meters, meters);
+    state.caseIndex = caseIdx;
+    state.turnIndex = turnIdx;
+    const cs = currentCase();
+    CONTENT.cases.forEach((c, i) => {
+      if (i < caseIdx && !state.ui.caseStatus[c.id]) state.ui.caseStatus[c.id] = "released";
+    });
+    state.ui.caseStatus[cs.id] = "active";
+    ensureAssess(cs.id);
+    state.ui.riskTag = null;
+    state.ui.issueTag = null;
+    state.ui.tagsFrozen = false;
+    state.ui.draftBlock = null;
+    state.ui.lastKind = null;
+    state.ui.shiftEnded = false;
+    renderMeters();
+    renderQueue();
+    $('threadMessages').innerHTML = "";
+    $('threadControls').hidden = false;
+    logEvent('debug_jump', { caseId: cs.id, turnId: cs.turns[turnIdx].id, flags: Object.assign({}, flags), meters: Object.assign({}, meters) });
+    $('debugPanel').hidden = true;
+    startTurn();
+  }
+
+  function toggleDebugPanel() {
+    const p = $('debugPanel');
+    if (p.hidden) { renderDebugPanel(); p.hidden = false; }
+    else p.hidden = true;
+  }
+
+  // Playtest hooks. Used by the headless smoke harness and handy from the
+  // console. Not part of the player-facing UI.
+  window.__oracleDebug = {
+    state,
+    TIMING,
+    jump: debugJump,
+    pattern: computePattern,
+    fast(scale) {
+      const s = scale == null ? 0.1 : scale;
+      Object.keys(TIMING).forEach((k) => { TIMING[k] = Math.max(10, Math.round(TIMING[k] * s)); });
+      document.documentElement.style.setProperty('--t-hold', TIMING.HOLD_MS + 'ms');
+    },
+    skipStream() { if (state.ui.finishStream) state.ui.finishStream(); },
+    tag(risk, issue) {
+      const rw = $('tagRisk'), iw = $('tagIssue');
+      const turn = currentTurn();
+      if (risk) selectTag('risk', risk, rw);
+      if (issue) selectTag('issue', issue, iw);
+      // mirror the visual selection
+      if (turn && turn.tags) {
+        Array.from(rw.children).forEach((c, i) => c.classList.toggle('is-selected', turn.tags.risk[i] === risk));
+        Array.from(iw.children).forEach((c, i) => c.classList.toggle('is-selected', state.ui.issueOptions[i] === issue));
+      }
+    },
+    choose(kind) { if (kind === 'continue') onContinue(); else chooseIntervention(kind); },
+    option(idx) {
+      const btns = Array.from($('subPanel').querySelectorAll('.btn-option'));
+      const b = btns[idx || 0];
+      if (!b || b.disabled) return false;
+      b.click();
+      return true;
+    },
+    confirmHandoff() { const b = Array.from($('subPanel').querySelectorAll('.btn')).find((x) => x.textContent === 'Confirm handoff'); if (b) b.click(); },
+    openEvidence(key) { openEvidence(key); },
+    // Resolves when the console is unlocked on the given turn (or any turn).
+    waitTurn(turnId, timeoutMs) {
+      const deadline = Date.now() + (timeoutMs || 60000);
+      return new Promise((resolve, reject) => {
+        const tick = () => {
+          const t = currentTurn();
+          if (state.ui.finishStream) state.ui.finishStream();
+          if (!state.ui.locked && t && (!turnId || t.id === turnId)) return resolve(t.id);
+          if (Date.now() > deadline) return reject(new Error('timeout waiting for ' + (turnId || 'any turn') + ' (at ' + (t && t.id) + ', locked=' + state.ui.locked + ')'));
+          setTimeout(tick, 40);
+        };
+        tick();
+      });
+    },
+    waitScreen(id, timeoutMs) {
+      const deadline = Date.now() + (timeoutMs || 60000);
+      return new Promise((resolve, reject) => {
+        const tick = () => {
+          if (!$(id).hidden) return resolve(id);
+          if (Date.now() > deadline) return reject(new Error('timeout waiting for ' + id));
+          setTimeout(tick, 40);
+        };
+        tick();
+      });
+    },
+    threadText() { return Array.from($('threadMessages').children).map((el) => el.textContent.trim()).join('\n'); },
+    logText() { return $('logText').textContent; },
+    oracleLine() { return $('oracleMargin').textContent; },
+    buttons() { return Array.from($('interventionRow').querySelectorAll('.btn')).map((b) => b.dataset.kind); },
+    chips() { return Array.from($('tagIssue').children).map((c) => c.textContent); },
+    evidenceKeys() { return Array.from($('evidenceList').querySelectorAll('.evidence-section')).map((s) => s.dataset.key); }
+  };
 
   // =====================================================================
   // Keyboard
   // =====================================================================
   document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
+      e.preventDefault();
+      downloadExport();
+      return;
+    }
+    if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+      e.preventDefault();
+      toggleDebugPanel();
+      return;
+    }
     if (e.key === 'Escape') {
+      if (!$('debugPanel').hidden) { $('debugPanel').hidden = true; return; }
       const p = $('subPanel');
       if (!p.hidden && !state.ui.locked && subPanelOptions && subPanelOptions.kind !== 'verify') clearSubPanel();
       else if (!p.hidden && !state.ui.locked && !subPanelOptions) clearSubPanel();
