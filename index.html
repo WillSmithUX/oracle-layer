@@ -575,6 +575,7 @@
     LINE_DELAY_MS: 700,       // gap between successive system/oracle lines
     NEXT_TURN_DELAY_MS: 2400, // gap before the next turn begins
     CONTINUE_DELAY_MS: 600,   // gap after "Continue to intervention"
+    NUDGE_DELAY_MS: 1400,     // gap before a student's "are you there" during verify
     CLOSING_DELAY_MS: 1400,   // gap before a closing turn's message
     CLOSING_HOLD_MS: 3600,    // gap after a closing message before moving on
     CASE_GAP_MS: 1800,        // gap between a case ending and the next opening
@@ -1386,7 +1387,7 @@
         logEvent('subchoice', { kind, label: o.label });
         // `kind` is the intervention the player chose (e.g. verify) and is
         // what gets scored; `o.as` only changes how the release is rendered.
-        release(o.as || kind, o, { optionLabel: o.label, fit: o.fit, fitKind: kind });
+        release(o.as || kind, o, { optionLabel: o.label, fit: resolveText(o.fit), fitKind: kind });
       });
       list.appendChild(btn);
       buttons.push({ btn, opt });
@@ -1445,7 +1446,16 @@
     if (spec.reveals) revealEvidence(spec.reveals, turn);
     setFlags(spec.setFlags);
     setOracleLine(oracleLineFor('on_verify', spec.oracleLine));
-    if (spec.effects) await applyEffects(spec.effects, spec.reasons);
+    // The cost of checking: the student may nudge, and a meter may move.
+    const nudge = resolveText(spec.nudge);
+    if (nudge && nudge.text) {
+      await wait(TIMING.NUDGE_DELAY_MS);
+      if (stale(ep)) return;
+      addStudentMessage(nudge.text, nudge.time);
+      logEvent('nudge', { text: nudge.text });
+    }
+    const verifyEffects = resolveText(spec.effects);
+    if (verifyEffects) await applyEffects(verifyEffects, resolveText(spec.reasons));
     if (stale(ep)) return;
     state.ui.locked = false;
     const revealedLabel = [].concat(spec.reveals || []).map((k) => CONTENT.ui.evidenceLabels[k] || k).join(", ");
@@ -1505,7 +1515,7 @@
     await wait(pauseMs);
     if (stale(ep)) return;
 
-    await applyEffects(outcome.effects, outcome.reasons);
+    await applyEffects(resolveText(outcome.effects), resolveText(outcome.reasons));
     if (stale(ep)) return;
     setFlags(outcome.setFlags);
     if (outcome.recovery) {
@@ -1521,7 +1531,7 @@
     if (reply) {
       await wait(TIMING.REPLY_DELAY_MS);
       if (stale(ep)) return;
-      addStudentMessage(reply, outcome.replyTime);
+      addStudentMessage(reply, resolveText(outcome.replyTime));
       logEvent('reply_shown', { text: reply });
     }
     if (outcome.systemLineAfter) {
@@ -1581,9 +1591,11 @@
       const fit = (ctx.fit != null) ? ctx.fit : (fitMap[chosen] != null ? fitMap[chosen] : 0);
       // Under: a weak intervention where the expert rated risk high.
       // Over: a hold (block/escalate) the expert rated as poor fit or
-      // applied to a low-risk case.
+      // applied to a low-risk case, or a check (verify) with nothing to
+      // find — over-checking is a failure mode too.
       const under = ex.risk === 'high' && fit <= 1;
-      const over = (chosen === 'block' || chosen === 'escalate') && (ex.risk === 'low' || fit <= 1);
+      const over = ((chosen === 'block' || chosen === 'escalate') && (ex.risk === 'low' || fit <= 1))
+        || (chosen === 'verify' && fit <= 1);
       rec.intervention = chosen;
       rec.interventionFit = fit;
       rec.underIntervention = under;
@@ -1895,6 +1907,8 @@
     if (f.recovered) out.push(M.recovered);
     if (f.compounded) out.push(M.compounded);
     if (a1 && a1.turns.filter((t) => t.intervention === 'block').length >= 2) out.push(M.heldTwice);
+    if (a1 && a1.turns.some((t) => t.turnId === 'c1t3a' && t.intervention === 'verify' && t.interventionFit <= 1)) out.push(M.checkedTwice);
+    if (a1 && a1.turns.some((t) => t.turnId === 'c1t4' && t.intervention === 'verify')) out.push(M.checkedDistress);
     if (f.sentUnverified) out.push(M.sentUnverified);
     if (a1) {
       const early = a1.evidenceOpens.find((e) => e.turnId === 'c1t1' || e.turnId === 'c1t2');
