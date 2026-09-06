@@ -26,7 +26,7 @@ The mechanic is the assessment. Every click is evidence of judgment.
 ## 1. Premise, tone, and rules of the fiction
 
 ### Setting
-Westbrook University, near future. Oracle is the campus AI advisor: fast,
+An unnamed university, near future. Oracle is the campus AI advisor: fast,
 warm, specific, well liked. Some time ago something went wrong. The
 engineering team added a human-in-the-loop review layer to Oracle's release
 pipeline. That layer is the player. The game refers to the player only as
@@ -273,7 +273,7 @@ Mute by default until the player clicks anywhere (browser autoplay rules).
 
 ```js
 const CONTENT = {
-  boot: [ "loading advisor model westbrook-adv-3.2", "...", "review layer attached", "session L-0419" ],
+  boot: [ "loading advisor model advisor-core-3.2", "...", "review layer attached", "session L-0419" ],
   oracle: { lines: { on_draft: [...], on_hesitate: [...], ... } },
   leaks: [ ... ],           // see §8
   cases: [ { id, student: {name, handle, bio}, turns: [ ... ] }, ... ],
@@ -460,7 +460,7 @@ to trust, when to question, and when to involve another person.*
 ## 8. Log line and leaks
 
 The log line cycles mundane entries every 8–15s:
-"retrieval cache warm", "latency 212ms", "advisor model westbrook-adv-3.2",
+"retrieval cache warm", "latency 212ms", "advisor model advisor-core-3.2",
 "queue depth 2", "release pipeline nominal", "policy index refreshed 03:12".
 
 Leaks fire at fixed points, once each, and are never explained:

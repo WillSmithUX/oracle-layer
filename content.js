@@ -227,7 +227,7 @@ const CONTENT = {
   // Boot log lines (used by the boot sequence in build step 5).
   // "{leak:key}" entries render CONTENT.leaks[key] in the leak style.
   boot: [
-    "loading advisor model westbrook-adv-3.2",
+    "loading advisor model advisor-core-3.2",
     "retrieval index: 41,206 documents",
     "policy layer: attached",
     "{leak:boot}",
