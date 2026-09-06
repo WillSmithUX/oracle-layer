@@ -14,12 +14,20 @@
     --color-text-dim: #8b95a7;
     --color-mint: #4de8b0;
     --color-mint-dim: rgba(77, 232, 176, 0.15);
+    --color-mint-glow: rgba(77, 232, 176, 0.45);
     --color-amber: #e8b64d;
     --color-gray: #5a6472;
     --color-danger: #d9695f;
+    --color-danger-dim: rgba(217, 105, 95, 0.12);
+    --color-student: #141b27;
+    --color-hold-fill: rgba(255, 255, 255, 0.18);
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --radius: 4px;
+    /* Timing values below are set from the TIMING object at boot. */
+    --t-slide: 300ms;
+    --t-hold: 700ms;
+    --t-meter: 600ms;
   }
 
   * { box-sizing: border-box; }
@@ -39,7 +47,7 @@
     min-width: 320px;
   }
 
-  /* Header */
+  /* ---------- Header ---------- */
   .app-header {
     display: flex;
     align-items: center;
@@ -50,332 +58,273 @@
     flex: 0 0 auto;
   }
 
-  .brand {
-    display: flex;
-    align-items: baseline;
-    gap: 16px;
-  }
-
-  .brand-title {
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-  }
-
+  .brand { display: flex; align-items: baseline; gap: 16px; }
+  .brand-title { font-size: 15px; font-weight: 700; letter-spacing: 0.06em; }
   .brand-meta {
-    display: flex;
-    gap: 12px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--color-text-dim);
+    display: flex; gap: 12px;
+    font-family: var(--font-mono); font-size: 12px; color: var(--color-text-dim);
   }
 
-  .oracle-glyph {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
+  .oracle-glyph { display: flex; align-items: center; gap: 10px; }
   .glyph-label {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 0.08em;
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em;
     color: var(--color-text-dim);
   }
-
-  .glyph-ring-track {
-    fill: none;
-    stroke: var(--color-border);
-    stroke-width: 2;
+  .glyph-confidence {
+    font-family: var(--font-mono); font-size: 13px; color: var(--color-mint);
+    min-width: 3.2ch; text-align: right;
   }
+  .glyph-confidence:empty { display: none; }
 
+  .glyph-ring-track { fill: none; stroke: var(--color-border); stroke-width: 2; }
   .glyph-ring-fill {
-    fill: none;
-    stroke: var(--color-mint);
-    stroke-width: 2;
-    stroke-linecap: round;
-    transform-origin: center;
+    fill: none; stroke: var(--color-mint); stroke-width: 2; stroke-linecap: round;
     animation: glyph-idle 4s ease-in-out infinite;
   }
-
+  .glyph-ring-conf {
+    fill: none; stroke: var(--color-mint); stroke-width: 1.5; stroke-linecap: round;
+    transform: rotate(-90deg); transform-origin: center;
+    transition: stroke-dasharray 200ms linear;
+    opacity: 0.9;
+  }
   @keyframes glyph-idle {
-    0%, 100% { opacity: 0.45; stroke-width: 2; }
-    50% { opacity: 1; stroke-width: 3; }
+    0%, 100% { opacity: 0.35; stroke-width: 2; }
+    50% { opacity: 0.9; stroke-width: 3; }
   }
 
-  /* Console layout */
+  /* ---------- Console layout ---------- */
   .console {
     flex: 1 1 auto;
     display: grid;
     grid-template-columns: 200px 1fr 300px;
     min-height: 0;
   }
-
   @media (max-width: 900px) {
-    .console {
-      grid-template-columns: 1fr;
-      grid-auto-rows: auto;
-      overflow-y: auto;
-    }
+    .console { grid-template-columns: 1fr; grid-auto-rows: auto; overflow-y: auto; }
   }
 
-  .panel {
-    padding: 16px;
-    overflow-y: auto;
-    min-height: 0;
-  }
-
-  .panel-queue {
-    background: var(--color-panel);
-    border-right: 1px solid var(--color-border);
-  }
-
-  .panel-thread {
-    background: var(--color-bg);
-    display: flex;
-    flex-direction: column;
-  }
-
+  .panel { padding: 16px; overflow-y: auto; min-height: 0; }
+  .panel-queue { background: var(--color-panel); border-right: 1px solid var(--color-border); }
+  .panel-thread { background: var(--color-bg); display: flex; flex-direction: column; overflow: hidden; }
   .panel-side {
-    background: var(--color-panel);
-    border-left: 1px solid var(--color-border);
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
+    background: var(--color-panel); border-left: 1px solid var(--color-border);
+    display: flex; flex-direction: column; gap: 24px;
   }
 
   .panel-title {
     margin: 0 0 12px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--color-text-dim);
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--color-text-dim);
   }
 
-  /* Queue */
-  .queue-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
+  /* ---------- Queue ---------- */
+  .queue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
   .queue-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 8px;
-    border-radius: var(--radius);
-    font-size: 13px;
-    color: var(--color-text-dim);
+    display: flex; align-items: center; gap: 8px; padding: 8px;
+    border-radius: var(--radius); font-size: 13px; color: var(--color-text-dim);
   }
-
-  .queue-item.is-active {
-    background: var(--color-mint-dim);
-    color: var(--color-text);
-  }
-
-  .queue-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--color-gray);
-    flex: 0 0 auto;
-  }
-
-  .queue-item.is-active .queue-dot {
-    background: var(--color-mint);
-  }
-
-  .queue-name {
-    flex: 1 1 auto;
-  }
-
+  .queue-item.is-active { background: var(--color-mint-dim); color: var(--color-text); }
+  .queue-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-gray); flex: 0 0 auto; }
+  .queue-item.is-active .queue-dot { background: var(--color-mint); }
+  .queue-item.is-released .queue-dot { background: var(--color-mint); opacity: 0.5; }
+  .queue-item.is-held .queue-dot { background: var(--color-amber); opacity: 0.7; }
+  .queue-name { flex: 1 1 auto; }
+  .queue-time { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-dim); }
   .queue-status {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    text-transform: uppercase;
+    font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
     color: var(--color-text-dim);
   }
 
-  /* Thread */
+  /* ---------- Thread ---------- */
+  .thread-messages {
+    flex: 1 1 auto; overflow-y: auto; min-height: 0;
+    display: flex; flex-direction: column; gap: 14px; padding-right: 6px; padding-bottom: 8px;
+  }
   .thread-empty {
-    flex: 1 1 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-text-dim);
-    font-family: var(--font-mono);
-    font-size: 13px;
+    flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
+    color: var(--color-text-dim); font-family: var(--font-mono); font-size: 13px;
   }
-
   .thread-empty p { margin: 0; }
 
-  .tag-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 0;
-    border-top: 1px solid var(--color-border);
+  .msg { animation: slide-in var(--t-slide) ease-out both; max-width: 78%; }
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
   }
 
+  .msg-meta {
+    display: flex; gap: 10px; align-items: baseline; margin-bottom: 5px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--color-text-dim);
+  }
+  .msg-meta .msg-name { color: var(--color-text); letter-spacing: 0.04em; }
+  .msg-body { font-size: 14px; line-height: 1.5; }
+  .msg-body em { font-style: italic; color: var(--color-text); }
+
+  .msg-student .msg-body {
+    background: var(--color-student); border: 1px solid var(--color-border);
+    border-radius: 10px 10px 10px 3px; padding: 10px 14px;
+  }
+
+  .msg-draft { align-self: flex-end; }
+  .msg-draft .msg-meta { justify-content: flex-end; }
+  .msg-draft .msg-meta .msg-name { color: var(--color-mint); }
+  .msg-draft .msg-body {
+    border: 1px dashed var(--color-mint); border-radius: 10px 10px 3px 10px;
+    padding: 10px 14px; background: rgba(77, 232, 176, 0.04);
+    min-height: 2.6em;
+  }
+  .msg-draft .msg-body.is-streaming { cursor: pointer; }
+  .msg-draft .msg-body.is-streaming::after {
+    content: "▍"; color: var(--color-mint); animation: caret 0.8s steps(1) infinite;
+  }
+  @keyframes caret { 50% { opacity: 0; } }
+  .msg-draft.is-released .msg-body {
+    border-style: solid; background: var(--color-mint-dim);
+  }
+  .msg-draft.is-blocked .msg-body {
+    border-style: solid; border-color: var(--color-gray); color: var(--color-text-dim);
+    text-decoration: line-through; text-decoration-color: var(--color-gray);
+  }
+  .msg-draft.is-held .msg-body {
+    border-style: solid; border-color: var(--color-amber); color: var(--color-text-dim);
+  }
+
+  .msg-system {
+    align-self: center; max-width: 100%;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
+    color: var(--color-text-dim); text-transform: uppercase;
+  }
+  .msg-system::before, .msg-system::after { content: " — "; color: var(--color-border); }
+  .msg-system.is-alert { color: var(--color-amber); }
+
+  /* ---------- Controls (bottom of thread) ---------- */
+  .thread-controls { flex: 0 0 auto; border-top: 1px solid var(--color-border); padding-top: 10px; }
+
+  .oracle-margin {
+    min-height: 1.6em; margin: 0 0 8px;
+    font-size: 13px; font-style: italic; color: var(--color-mint);
+    opacity: 0.85; transition: opacity 200ms ease;
+  }
+  .oracle-margin::before { content: "◯ "; font-style: normal; opacity: 0.6; }
+  .oracle-margin:empty::before { content: ""; }
+
+  .tag-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 6px 0; }
   .tag-row-label {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-text-dim);
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--color-text-dim); min-width: 42px;
   }
 
   .chip {
-    font-family: var(--font-sans);
-    font-size: 12px;
-    padding: 5px 12px;
-    border-radius: 999px;
-    border: 1px solid var(--color-border);
-    background: transparent;
-    color: var(--color-text-dim);
-    cursor: not-allowed;
+    font-family: var(--font-sans); font-size: 12px; padding: 5px 12px;
+    border-radius: 999px; border: 1px solid var(--color-border);
+    background: transparent; color: var(--color-text-dim); cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
+  }
+  .chip:hover { border-color: var(--color-mint); color: var(--color-text); }
+  .chip:focus-visible { outline: 2px solid var(--color-mint); outline-offset: 2px; }
+  .chip.is-selected { background: var(--color-mint-dim); border-color: var(--color-mint); color: var(--color-text); }
+  .chip:disabled { cursor: default; opacity: 0.5; }
+  .chip:disabled.is-selected { opacity: 1; }
+
+  .intervention-row { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
+  .sub-panel {
+    padding: 10px 0 2px; display: flex; flex-direction: column; gap: 8px;
+    animation: slide-in var(--t-slide) ease-out both;
+  }
+  .sub-panel-title {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--color-text-dim);
+  }
+  .sub-panel-note {
+    font-size: 13px; color: var(--color-text-dim); border-left: 2px solid var(--color-amber);
+    padding: 6px 10px; background: var(--color-panel);
+  }
+  .sub-panel-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .option-list { display: flex; flex-direction: column; gap: 6px; }
+  .btn-option { text-align: left; font-weight: 500; display: flex; justify-content: space-between; gap: 12px; }
+  .btn-hint {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--color-text-dim); font-weight: 400;
   }
 
-  /* Buttons */
-  .intervention-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding-top: 4px;
-  }
-
+  /* ---------- Buttons ---------- */
   .btn {
-    font-family: var(--font-sans);
-    font-size: 13px;
-    font-weight: 600;
-    padding: 10px 16px;
-    border-radius: var(--radius);
-    border: 1px solid var(--color-border);
-    background: var(--color-panel-alt);
-    color: var(--color-text);
-    cursor: pointer;
-    transition: background 0.12s ease, border-color 0.12s ease, transform 0.05s ease;
+    position: relative; overflow: hidden;
+    font-family: var(--font-sans); font-size: 13px; font-weight: 600;
+    padding: 10px 16px; border-radius: var(--radius);
+    border: 1px solid var(--color-border); background: var(--color-panel-alt);
+    color: var(--color-text); cursor: pointer; user-select: none; -webkit-user-select: none;
+    transition: background 0.12s ease, border-color 0.12s ease, transform 0.05s ease, opacity 0.12s ease;
   }
+  .btn:hover:not(:disabled) { border-color: var(--color-mint); background: var(--color-mint-dim); }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:focus-visible { outline: 2px solid var(--color-mint); outline-offset: 2px; }
+  .btn:disabled { opacity: 0.38; cursor: not-allowed; }
 
-  .btn:hover {
-    border-color: var(--color-mint);
-    background: var(--color-mint-dim);
+  .btn-primary { background: var(--color-mint); border-color: var(--color-mint); color: #05130d; }
+  .btn-primary:hover:not(:disabled) { background: var(--color-mint); filter: brightness(1.08); }
+  .btn-danger { border-color: var(--color-danger); color: var(--color-danger); }
+  .btn-danger:hover:not(:disabled) { background: var(--color-danger-dim); border-color: var(--color-danger); }
+  .btn-ghost { background: transparent; }
+
+  .btn-hold { touch-action: none; }
+  .btn-hold .btn-hint { margin-left: 8px; opacity: 0.7; }
+  .btn-primary .btn-hint { color: #05130d; }
+  .btn-hold::after {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+    background: var(--color-hold-fill); pointer-events: none;
   }
+  .btn-hold.is-holding::after { width: 100%; transition: width var(--t-hold) linear; }
 
-  .btn:active {
-    transform: translateY(1px);
-  }
-
-  .btn:focus-visible {
-    outline: 2px solid var(--color-mint);
-    outline-offset: 2px;
-  }
-
-  .btn-primary {
-    background: var(--color-mint);
-    border-color: var(--color-mint);
-    color: #05130d;
-  }
-
-  .btn-primary:hover {
-    background: var(--color-mint);
-    filter: brightness(1.08);
-  }
-
-  .btn-danger {
-    border-color: var(--color-danger);
-    color: var(--color-danger);
-  }
-
-  .btn-danger:hover {
-    background: rgba(217, 105, 95, 0.12);
-  }
-
-  /* Evidence */
-  .evidence-section {
-    border-bottom: 1px solid var(--color-border);
-  }
-
+  /* ---------- Evidence ---------- */
+  .evidence-section { border-bottom: 1px solid var(--color-border); }
   .evidence-toggle {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-    background: none;
-    border: none;
-    color: var(--color-text);
-    font-family: var(--font-sans);
-    font-size: 13px;
-    text-align: left;
-    cursor: pointer;
+    width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 4px;
+    background: none; border: 1px solid transparent; border-radius: var(--radius);
+    color: var(--color-text); font-family: var(--font-sans); font-size: 13px;
+    text-align: left; cursor: pointer;
   }
-
-  .evidence-toggle:hover {
-    color: var(--color-mint);
+  .evidence-toggle:hover { color: var(--color-mint); border-color: var(--color-border); }
+  .evidence-toggle:focus-visible { outline: 2px solid var(--color-mint); outline-offset: 2px; }
+  .evidence-caret { color: var(--color-text-dim); width: 10px; }
+  .evidence-toggle.is-glowing { animation: glow 2.4s ease-in-out 1; }
+  @keyframes glow {
+    0%, 100% { box-shadow: none; }
+    50% { box-shadow: 0 0 0 1px var(--color-mint-glow), 0 0 12px var(--color-mint-glow); }
   }
-
-  .evidence-caret {
-    color: var(--color-text-dim);
-    width: 10px;
-  }
-
   .evidence-body {
-    padding: 0 0 12px 18px;
-    font-size: 12px;
-    color: var(--color-text-dim);
-    font-family: var(--font-mono);
+    padding: 4px 4px 12px 22px; font-size: 12px; line-height: 1.55;
+    color: var(--color-text-dim); font-family: var(--font-mono);
   }
+  .evidence-body em { color: var(--color-mint); font-style: normal; }
+  .evidence-empty { font-family: var(--font-mono); font-size: 12px; color: var(--color-gray); padding: 8px 4px; }
 
-  /* Meters */
-  .meter {
-    margin-bottom: 12px;
-  }
-
-  .meter-label {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: var(--color-text-dim);
-    margin-bottom: 4px;
-  }
-
-  .meter-value {
-    font-family: var(--font-mono);
-  }
-
+  /* ---------- Meters ---------- */
+  .meter { margin-bottom: 14px; }
+  .meter-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--color-text-dim); margin-bottom: 4px; }
+  .meter-value { font-family: var(--font-mono); display: flex; gap: 8px; }
+  .meter-delta { font-family: var(--font-mono); opacity: 0; transition: opacity 300ms ease; }
+  .meter-delta.is-up { color: var(--color-mint); }
+  .meter-delta.is-down { color: var(--color-danger); }
+  .meter-delta.is-shown { opacity: 1; }
   .meter-track {
-    height: 6px;
-    border-radius: 999px;
-    background: var(--color-panel-alt);
-    border: 1px solid var(--color-border);
-    overflow: hidden;
+    height: 6px; border-radius: 999px; background: var(--color-panel-alt);
+    border: 1px solid var(--color-border); overflow: hidden;
   }
-
-  .meter-fill {
-    height: 100%;
-    background: var(--color-mint);
+  .meter-fill { height: 100%; background: var(--color-mint); transition: width var(--t-meter) cubic-bezier(.2,.7,.2,1); }
+  .meter-reason {
+    font-family: var(--font-mono); font-size: 10px; color: var(--color-text-dim);
+    margin-top: 4px; min-height: 1.2em; opacity: 0; transition: opacity 400ms ease;
   }
+  .meter-reason.is-shown { opacity: 1; }
 
-  /* Log line */
+  /* ---------- Log line ---------- */
   .log-line {
-    flex: 0 0 auto;
-    padding: 8px 20px;
-    border-top: 1px solid var(--color-border);
-    background: var(--color-panel);
-    font-family: var(--font-mono);
-    font-size: 12px;
+    flex: 0 0 auto; padding: 8px 20px; border-top: 1px solid var(--color-border);
+    background: var(--color-panel); font-family: var(--font-mono); font-size: 12px;
     color: var(--color-text-dim);
   }
-
-  .log-prefix {
-    color: var(--color-gray);
-  }
+  .log-prefix { color: var(--color-gray); }
 </style>
 </head>
 <body>
@@ -384,90 +333,55 @@
     <div class="brand">
       <span class="brand-title">THE ORACLE LAYER</span>
       <span class="brand-meta">
-        <span class="session-id">session L-0419</span>
+        <span class="session-id" id="sessionId">session L-0419</span>
         <span class="shift-id">shift 01</span>
       </span>
     </div>
     <div class="oracle-glyph" id="oracleGlyph">
+      <span class="glyph-label">ORACLE</span>
       <svg class="glyph-ring" viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
         <circle class="glyph-ring-track" cx="20" cy="20" r="17"></circle>
         <circle class="glyph-ring-fill" cx="20" cy="20" r="17"></circle>
+        <circle class="glyph-ring-conf" id="glyphConf" cx="20" cy="20" r="14" stroke-dasharray="0 88"></circle>
       </svg>
-      <span class="glyph-label">ORACLE</span>
+      <span class="glyph-confidence" id="glyphConfidence"></span>
     </div>
   </header>
 
   <main class="console">
     <section class="panel panel-queue" aria-label="Queue">
       <h2 class="panel-title">Queue</h2>
-      <ul class="queue-list">
-        <li class="queue-item is-active"><span class="queue-dot"></span><span class="queue-name">Case 1</span><span class="queue-status">active</span></li>
-        <li class="queue-item"><span class="queue-dot"></span><span class="queue-name">Case 2</span><span class="queue-status">waiting</span></li>
-        <li class="queue-item"><span class="queue-dot"></span><span class="queue-name">Case 3</span><span class="queue-status">waiting</span></li>
-      </ul>
+      <ul class="queue-list" id="queueList"></ul>
     </section>
 
     <section class="panel panel-thread" aria-label="Thread">
       <h2 class="panel-title">Thread</h2>
-      <div class="thread-empty">
-        <p>No case loaded.</p>
+      <div class="thread-messages" id="threadMessages">
+        <div class="thread-empty" id="threadEmpty"><p>No case loaded.</p></div>
       </div>
-      <div class="tag-row">
-        <span class="tag-row-label">tags</span>
-        <button class="chip" type="button" disabled>risk</button>
-        <button class="chip" type="button" disabled>issue</button>
-      </div>
-      <div class="intervention-row" role="group" aria-label="Interventions">
-        <button class="btn btn-primary" type="button">Send</button>
-        <button class="btn" type="button">Revise</button>
-        <button class="btn" type="button">Qualify</button>
-        <button class="btn" type="button">Verify</button>
-        <button class="btn" type="button">Escalate</button>
-        <button class="btn btn-danger" type="button">Block</button>
+      <div class="thread-controls" id="threadControls" hidden>
+        <p class="oracle-margin" id="oracleMargin"></p>
+        <div class="tag-row" id="tagRiskRow">
+          <span class="tag-row-label">risk</span>
+          <div class="tag-chips" id="tagRisk" role="group" aria-label="Risk"></div>
+        </div>
+        <div class="tag-row" id="tagIssueRow">
+          <span class="tag-row-label">issue</span>
+          <div class="tag-chips" id="tagIssue" role="group" aria-label="Primary issue"></div>
+        </div>
+        <div class="intervention-row" id="interventionRow" role="group" aria-label="Interventions"></div>
+        <div class="sub-panel" id="subPanel" hidden></div>
       </div>
     </section>
 
     <aside class="panel panel-side" aria-label="Evidence and meters">
       <div class="evidence">
         <h2 class="panel-title">Evidence</h2>
-        <div class="evidence-section">
-          <button class="evidence-toggle" type="button" aria-expanded="false">
-            <span class="evidence-caret">&#9656;</span> Student file
-          </button>
-          <div class="evidence-body" hidden>No evidence loaded for this turn.</div>
-        </div>
-        <div class="evidence-section">
-          <button class="evidence-toggle" type="button" aria-expanded="false">
-            <span class="evidence-caret">&#9656;</span> Records
-          </button>
-          <div class="evidence-body" hidden>No evidence loaded for this turn.</div>
-        </div>
-        <div class="evidence-section">
-          <button class="evidence-toggle" type="button" aria-expanded="false">
-            <span class="evidence-caret">&#9656;</span> Policy
-          </button>
-          <div class="evidence-body" hidden>No evidence loaded for this turn.</div>
-        </div>
+        <div id="evidenceList"><div class="evidence-empty">—</div></div>
       </div>
-
       <div class="meters">
         <h2 class="panel-title">Meters</h2>
-        <div class="meter" data-meter="trust">
-          <div class="meter-label"><span>Calibrated Trust</span><span class="meter-value">50</span></div>
-          <div class="meter-track"><div class="meter-fill" style="width: 50%"></div></div>
-        </div>
-        <div class="meter" data-meter="accuracy">
-          <div class="meter-label"><span>Accuracy</span><span class="meter-value">50</span></div>
-          <div class="meter-track"><div class="meter-fill" style="width: 50%"></div></div>
-        </div>
-        <div class="meter" data-meter="autonomy">
-          <div class="meter-label"><span>Autonomy</span><span class="meter-value">50</span></div>
-          <div class="meter-track"><div class="meter-fill" style="width: 50%"></div></div>
-        </div>
-        <div class="meter" data-meter="safety">
-          <div class="meter-label"><span>Safety</span><span class="meter-value">50</span></div>
-          <div class="meter-track"><div class="meter-fill" style="width: 50%"></div></div>
-        </div>
+        <div id="meterList"></div>
       </div>
     </aside>
   </main>
@@ -477,17 +391,37 @@
   </footer>
 </div>
 
+<script src="content.js"></script>
 <script>
-  // Timing constants used by this step. More are added as later build-order
-  // steps introduce draft streaming, release pauses, and the hesitation timer.
+(function () {
+  'use strict';
+
+  // =====================================================================
+  // Timing. Every duration in the engine lives here (PLAN.md §5, §10).
+  // =====================================================================
   const TIMING = {
     GLYPH_IDLE_MS: 4000,
     LOG_CYCLE_MIN_MS: 8000,
-    LOG_CYCLE_MAX_MS: 15000
+    LOG_CYCLE_MAX_MS: 15000,
+    SLIDE_MS: 300,            // message slide-in
+    STREAM_CPS: 30,           // draft streaming, chars per second
+    DRAFT_DELAY_MS: 900,      // gap between student message and draft start
+    RELEASE_PAUSE_MS: 1200,   // silence after release, normal risk
+    RELEASE_PAUSE_HIGH_MS: 2500, // silence after release, expert risk === high
+    HOLD_MS: 700,             // hold-to-confirm for Send / Block
+    METER_ANIM_MS: 600,
+    METER_STAGGER_MS: 180,    // gap between successive meter animations
+    REASON_TAG_MS: 6000,      // reason tag visible duration
+    REPLY_DELAY_MS: 1100,     // gap between meters settling and student reply
+    LINE_DELAY_MS: 700,       // gap between successive system/oracle lines
+    NEXT_TURN_DELAY_MS: 2400, // gap before the next turn begins
+    HESITATION_MS: 20000      // on_hesitate timer (wired in build step 5)
   };
 
-  // Mundane pipeline chatter. Not case content, so it lives here rather than
-  // in content.js (which holds only per-case and per-shift copy).
+  // Bars move this many display points per raw meter unit (PLAN.md §5).
+  // Alternative if bars saturate in playtests: lower to 3.
+  const METER_SCALE = 5;
+
   const LOG_LINES = [
     "retrieval cache warm",
     "latency 212ms",
@@ -497,22 +431,849 @@
     "policy index refreshed 03:12"
   ];
 
+  const METER_NAMES = { trust: "Calibrated Trust", accuracy: "Accuracy", autonomy: "Autonomy", safety: "Safety" };
+  const INTERVENTION_ORDER = ["send", "revise", "qualify", "verify", "escalate", "block"];
+  const INTERVENTION_LABELS = { send: "Send", revise: "Revise", qualify: "Qualify", verify: "Verify", escalate: "Escalate", block: "Block" };
+
+  // =====================================================================
+  // State
+  // =====================================================================
+  const state = {
+    session: "L-0419",
+    meters: { trust: 50, accuracy: 50, autonomy: 50, safety: 50 },
+    flags: {},
+    caseIndex: 0,
+    turnIndex: 0,
+    log: [],
+    assess: {},
+    // Runtime UI state; not part of the export.
+    ui: {
+      locked: true,
+      riskTag: null,
+      issueTag: null,
+      evidenceOpenedByCase: {},   // caseId -> Set of section keys opened
+      revealedByCase: {},         // caseId -> Set of section keys unlocked by verify
+      caseStatus: {},             // caseId -> waiting | active | released | held
+      evidenceLineFired: false,   // on_evidence_open fired this turn
+      draftShownAt: null,
+      draftBlock: null,           // DOM node of the current turn's draft
+      lastKind: null,             // last released intervention kind
+      finishStream: null
+    }
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const resolveText = (v) => (typeof v === 'function' ? v(state) : v);
+
+  function currentCase() { return CONTENT.cases[state.caseIndex]; }
+  function currentTurn() { return currentCase().turns[state.turnIndex]; }
+
+  function logEvent(type, payload) {
+    const cs = CONTENT.cases[state.caseIndex];
+    const turn = cs && cs.turns[state.turnIndex];
+    state.log.push({
+      t: Date.now(),
+      type,
+      caseId: cs ? cs.id : null,
+      turnId: turn ? turn.id : null,
+      payload: payload || {}
+    });
+  }
+
+  function setFlags(flags) {
+    if (!flags) return;
+    Object.keys(flags).forEach((k) => { state.flags[k] = flags[k]; });
+  }
+
+  // Escape HTML, then render *text* as <em> and newlines as <br>.
+  function renderMd(text) {
+    const esc = String(text)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return esc.replace(/\*([^*\n]+)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
+  }
+
+  function oracleLineFor(trigger, override) {
+    if (override) return override;
+    const list = CONTENT.oracle.lines[trigger];
+    return list && list.length ? pick(list) : "";
+  }
+
+  // =====================================================================
+  // Header: glyph confidence
+  // =====================================================================
+  const CONF_CIRC = 2 * Math.PI * 14;
+  function setConfidence(value) {
+    const el = $('glyphConfidence');
+    const arc = $('glyphConf');
+    if (value == null) {
+      el.textContent = "";
+      arc.setAttribute('stroke-dasharray', `0 ${CONF_CIRC}`);
+      return;
+    }
+    el.textContent = Math.round(value) + "%";
+    const len = (clamp(value, 0, 100) / 100) * CONF_CIRC;
+    arc.setAttribute('stroke-dasharray', `${len} ${CONF_CIRC}`);
+  }
+
+  // =====================================================================
+  // Log line
+  // =====================================================================
   function cycleLogLine() {
-    const el = document.getElementById('logText');
-    el.textContent = LOG_LINES[Math.floor(Math.random() * LOG_LINES.length)];
+    $('logText').textContent = pick(LOG_LINES);
     const delay = TIMING.LOG_CYCLE_MIN_MS + Math.random() * (TIMING.LOG_CYCLE_MAX_MS - TIMING.LOG_CYCLE_MIN_MS);
     setTimeout(cycleLogLine, delay);
   }
-  setTimeout(cycleLogLine, 1500);
 
-  document.querySelectorAll('.evidence-toggle').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const expanded = btn.getAttribute('aria-expanded') === 'true';
-      btn.setAttribute('aria-expanded', String(!expanded));
-      btn.nextElementSibling.hidden = expanded;
-      btn.querySelector('.evidence-caret').innerHTML = expanded ? '&#9656;' : '&#9662;';
+  // =====================================================================
+  // Queue
+  // =====================================================================
+  function renderQueue() {
+    const ul = $('queueList');
+    ul.innerHTML = "";
+    CONTENT.cases.forEach((cs) => {
+      const status = state.ui.caseStatus[cs.id] || "waiting";
+      const li = document.createElement('li');
+      li.className = "queue-item is-" + status;
+      const firstTurn = cs.turns.find((t) => t.time);
+      li.innerHTML =
+        `<span class="queue-dot"></span>` +
+        `<span class="queue-name">${cs.student.name}</span>` +
+        (firstTurn ? `<span class="queue-time">${firstTurn.time}</span>` : "") +
+        `<span class="queue-status">${status}</span>`;
+      ul.appendChild(li);
     });
+  }
+
+  // =====================================================================
+  // Thread rendering
+  // =====================================================================
+  function scrollThread() {
+    const el = $('threadMessages');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function addStudentMessage(text, time) {
+    const cs = currentCase();
+    const div = document.createElement('div');
+    div.className = "msg msg-student";
+    div.innerHTML =
+      `<div class="msg-meta"><span class="msg-name">${cs.student.name}</span>` +
+      (time ? `<span class="msg-time">${time}</span>` : "") + `</div>` +
+      `<div class="msg-body">${renderMd(text)}</div>`;
+    $('threadMessages').appendChild(div);
+    scrollThread();
+    return div;
+  }
+
+  function addSystemLine(text, alert) {
+    if (!text) return null;
+    const div = document.createElement('div');
+    div.className = "msg msg-system" + (alert ? " is-alert" : "");
+    div.textContent = text;
+    $('threadMessages').appendChild(div);
+    scrollThread();
+    return div;
+  }
+
+  function addDraftBlock(confidence) {
+    const div = document.createElement('div');
+    div.className = "msg msg-draft";
+    div.innerHTML =
+      `<div class="msg-meta"><span class="msg-name">ORACLE</span>` +
+      `<span class="msg-state">draft · ${confidence}%</span></div>` +
+      `<div class="msg-body"></div>`;
+    $('threadMessages').appendChild(div);
+    scrollThread();
+    return div;
+  }
+
+  function streamDraft(block, text, confidence) {
+    const body = block.querySelector('.msg-body');
+    const plain = text.replace(/\*/g, '');
+    const total = plain.length;
+    const intervalMs = 1000 / TIMING.STREAM_CPS;
+    let i = 0;
+    let done = false;
+    return new Promise((resolve) => {
+      const finish = () => {
+        if (done) return;
+        done = true;
+        clearInterval(iv);
+        body.classList.remove('is-streaming');
+        body.removeEventListener('click', finish);
+        body.innerHTML = renderMd(text);
+        setConfidence(confidence);
+        state.ui.finishStream = null;
+        scrollThread();
+        resolve();
+      };
+      body.classList.add('is-streaming');
+      body.addEventListener('click', finish);
+      state.ui.finishStream = finish;
+      const iv = setInterval(() => {
+        i += 1;
+        body.textContent = plain.slice(0, i);
+        setConfidence(confidence * (i / total));
+        if (i % 40 === 0) scrollThread();
+        if (i >= total) finish();
+      }, intervalMs);
+    });
+  }
+
+  function setOracleLine(text) {
+    const el = $('oracleMargin');
+    el.style.opacity = 0;
+    setTimeout(() => {
+      el.textContent = text || "";
+      el.style.opacity = "";
+    }, 160);
+  }
+
+  // =====================================================================
+  // Evidence
+  // =====================================================================
+  function visibleEvidence(turn) {
+    const cs = currentCase();
+    const revealed = state.ui.revealedByCase[cs.id] || new Set();
+    const base = Object.assign({}, cs.evidence || {}, turn.evidence || {});
+    const out = {};
+    Object.keys(base).forEach((key) => {
+      const entry = base[key];
+      const locked = entry && typeof entry === 'object' && entry.locked;
+      if (locked && !revealed.has(key)) return;
+      out[key] = typeof entry === 'object' ? entry.text : entry;
+    });
+    return out;
+  }
+
+  function renderEvidence(turn) {
+    const list = $('evidenceList');
+    list.innerHTML = "";
+    const sections = visibleEvidence(turn);
+    const keys = Object.keys(sections);
+    if (!keys.length) {
+      list.innerHTML = `<div class="evidence-empty">—</div>`;
+      return;
+    }
+    keys.forEach((key) => {
+      const sec = document.createElement('div');
+      sec.className = "evidence-section";
+      sec.dataset.key = key;
+      const label = CONTENT.ui.evidenceLabels[key] || key;
+      sec.innerHTML =
+        `<button class="evidence-toggle" type="button" aria-expanded="false">` +
+        `<span class="evidence-caret">&#9656;</span> ${label}</button>` +
+        `<div class="evidence-body" hidden>${renderMd(sections[key])}</div>`;
+      const btn = sec.querySelector('.evidence-toggle');
+      btn.addEventListener('click', () => toggleEvidence(key, btn));
+      if (turn.evidenceGlow) btn.classList.add('is-glowing');
+      list.appendChild(sec);
+    });
+  }
+
+  function toggleEvidence(key, btn, forceOpen) {
+    const body = btn.nextElementSibling;
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    const open = forceOpen ? true : !expanded;
+    btn.setAttribute('aria-expanded', String(open));
+    body.hidden = !open;
+    btn.querySelector('.evidence-caret').innerHTML = open ? '&#9662;' : '&#9656;';
+    btn.classList.remove('is-glowing');
+    if (open && !expanded) {
+      const cs = currentCase();
+      if (!state.ui.evidenceOpenedByCase[cs.id]) state.ui.evidenceOpenedByCase[cs.id] = new Set();
+      state.ui.evidenceOpenedByCase[cs.id].add(key);
+      logEvent('evidence_open', { section: key });
+      const a = state.assess[cs.id];
+      if (a) a.evidenceOpens.push({ turnId: currentTurn().id, section: key, t: Date.now() });
+      if (!state.ui.evidenceLineFired && !state.ui.locked) {
+        state.ui.evidenceLineFired = true;
+        setOracleLine(oracleLineFor('on_evidence_open'));
+      }
+      refreshSubPanelLocks();
+    }
+  }
+
+  function openEvidence(key) {
+    const sec = $('evidenceList').querySelector(`.evidence-section[data-key="${key}"]`);
+    if (!sec) return;
+    const btn = sec.querySelector('.evidence-toggle');
+    toggleEvidence(key, btn, true);
+    btn.classList.add('is-glowing');
+  }
+
+  function evidenceOpened(key) {
+    const set = state.ui.evidenceOpenedByCase[currentCase().id];
+    return !!(set && set.has(key));
+  }
+
+  function revealEvidence(keys, turn) {
+    const cs = currentCase();
+    if (!state.ui.revealedByCase[cs.id]) state.ui.revealedByCase[cs.id] = new Set();
+    const list = Array.isArray(keys) ? keys : [keys];
+    list.forEach((k) => state.ui.revealedByCase[cs.id].add(k));
+    renderEvidence(turn);
+    list.forEach((k) => openEvidence(k));
+  }
+
+  // =====================================================================
+  // Meters
+  // =====================================================================
+  function renderMeters() {
+    const list = $('meterList');
+    list.innerHTML = "";
+    Object.keys(METER_NAMES).forEach((key) => {
+      const div = document.createElement('div');
+      div.className = "meter";
+      div.dataset.meter = key;
+      div.innerHTML =
+        `<div class="meter-label"><span>${METER_NAMES[key]}</span>` +
+        `<span class="meter-value"><span class="meter-delta"></span><span class="meter-num">${state.meters[key]}</span></span></div>` +
+        `<div class="meter-track"><div class="meter-fill" style="width:${meterWidth(state.meters[key])}%"></div></div>` +
+        `<div class="meter-reason"></div>`;
+      list.appendChild(div);
+    });
+  }
+
+  function meterWidth(raw) {
+    return clamp(50 + (raw - 50) * METER_SCALE, 0, 100);
+  }
+
+  async function applyEffects(effects, reasons) {
+    if (!effects) return;
+    const changed = Object.keys(effects).filter((k) => effects[k] && METER_NAMES[k]);
+    for (const key of changed) {
+      const delta = effects[key];
+      state.meters[key] = clamp(state.meters[key] + delta, 0, 100);
+      const el = $('meterList').querySelector(`.meter[data-meter="${key}"]`);
+      el.querySelector('.meter-fill').style.width = meterWidth(state.meters[key]) + "%";
+      el.querySelector('.meter-num').textContent = state.meters[key];
+      const d = el.querySelector('.meter-delta');
+      d.textContent = (delta > 0 ? "+" : "") + delta;
+      d.className = "meter-delta is-shown " + (delta > 0 ? "is-up" : "is-down");
+      const r = el.querySelector('.meter-reason');
+      r.textContent = (reasons && reasons[key]) || "";
+      r.classList.add('is-shown');
+      setTimeout(() => { d.classList.remove('is-shown'); r.classList.remove('is-shown'); }, TIMING.REASON_TAG_MS);
+      await wait(TIMING.METER_STAGGER_MS);
+    }
+    await wait(TIMING.METER_ANIM_MS);
+  }
+
+  // =====================================================================
+  // Tags
+  // =====================================================================
+  function renderTags(turn) {
+    const riskWrap = $('tagRisk');
+    const issueWrap = $('tagIssue');
+    riskWrap.innerHTML = "";
+    issueWrap.innerHTML = "";
+    state.ui.riskTag = null;
+    state.ui.issueTag = null;
+    const tags = turn.tags;
+    $('tagRiskRow').hidden = !tags;
+    $('tagIssueRow').hidden = !tags;
+    if (!tags) return;
+    tags.risk.forEach((r) => riskWrap.appendChild(makeChip(CONTENT.ui.riskLabels[r] || r, () => selectTag('risk', r, riskWrap))));
+    tags.issues.forEach((i) => issueWrap.appendChild(makeChip(CONTENT.ui.issueLabels[i] || i, () => selectTag('issue', i, issueWrap))));
+  }
+
+  function makeChip(label, onClick) {
+    const b = document.createElement('button');
+    b.type = "button";
+    b.className = "chip";
+    b.textContent = label;
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  function selectTag(kind, value, wrap) {
+    if (state.ui.locked) return;
+    const idx = kind === 'risk' ? currentTurn().tags.risk.indexOf(value) : currentTurn().tags.issues.indexOf(value);
+    Array.from(wrap.children).forEach((c, i) => c.classList.toggle('is-selected', i === idx));
+    if (kind === 'risk') {
+      state.ui.riskTag = value;
+      logEvent('tag_risk', { value });
+      if (value === 'low' && currentTurn().expert.risk === 'high') state.flags.underestimatedRisk = true;
+    } else {
+      state.ui.issueTag = value;
+      logEvent('tag_issue', { value });
+    }
+    updateInterventionAvailability();
+  }
+
+  function tagsComplete() {
+    const turn = currentTurn();
+    if (!turn.tags) return true;
+    return !!(state.ui.riskTag && state.ui.issueTag);
+  }
+
+  // =====================================================================
+  // Interventions
+  // =====================================================================
+  function renderInterventions(turn) {
+    const row = $('interventionRow');
+    row.innerHTML = "";
+    INTERVENTION_ORDER.forEach((kind) => {
+      if (!turn.interventions[kind]) return;
+      const b = document.createElement('button');
+      b.type = "button";
+      b.dataset.kind = kind;
+      b.className = "btn" + (kind === 'send' ? " btn-primary" : "") + (kind === 'block' ? " btn-danger" : "");
+      if (kind === 'send' || kind === 'block') {
+        b.classList.add('btn-hold');
+        b.innerHTML = `${INTERVENTION_LABELS[kind]}<span class="btn-hint">hold</span>`;
+        makeHoldButton(b, () => chooseIntervention(kind));
+      } else {
+        b.textContent = INTERVENTION_LABELS[kind];
+        b.addEventListener('click', () => chooseIntervention(kind));
+      }
+      row.appendChild(b);
+    });
+    row.hidden = false;
+    updateInterventionAvailability();
+  }
+
+  function updateInterventionAvailability() {
+    const enabled = !state.ui.locked && tagsComplete();
+    $('interventionRow').querySelectorAll('.btn').forEach((b) => { b.disabled = !enabled; });
+    $('tagRisk').querySelectorAll('.chip').forEach((c) => { c.disabled = state.ui.locked; });
+    $('tagIssue').querySelectorAll('.chip').forEach((c) => { c.disabled = state.ui.locked; });
+  }
+
+  function makeHoldButton(btn, onConfirm) {
+    let timer = null;
+    const start = (e) => {
+      if (btn.disabled || timer) return;
+      if (e.type === 'keydown') {
+        if (e.repeat || (e.key !== 'Enter' && e.key !== ' ')) return;
+        e.preventDefault();
+      }
+      btn.classList.add('is-holding');
+      timer = setTimeout(() => {
+        timer = null;
+        btn.classList.remove('is-holding');
+        onConfirm();
+      }, TIMING.HOLD_MS);
+    };
+    const cancel = () => {
+      if (!timer) return;
+      clearTimeout(timer);
+      timer = null;
+      btn.classList.remove('is-holding');
+    };
+    btn.addEventListener('pointerdown', start);
+    btn.addEventListener('pointerup', cancel);
+    btn.addEventListener('pointerleave', cancel);
+    btn.addEventListener('pointercancel', cancel);
+    btn.addEventListener('keydown', start);
+    btn.addEventListener('keyup', cancel);
+    btn.addEventListener('blur', cancel);
+  }
+
+  function chooseIntervention(kind) {
+    if (state.ui.locked || !tagsComplete()) return;
+    const turn = currentTurn();
+    const spec = turn.interventions[kind];
+    logEvent('intervention', { kind });
+    switch (kind) {
+      case 'send':
+        release('send', spec, {});
+        break;
+      case 'block':
+        release('block', spec, {});
+        break;
+      case 'revise':
+        showOptionPanel('Revise — choose a rewrite', spec.options, 'revise', true);
+        break;
+      case 'qualify':
+        showOptionPanel('Qualify — choose a qualifier', spec.options, 'qualify', true);
+        break;
+      case 'escalate':
+        showEscalatePanel(spec);
+        break;
+      case 'verify':
+        doVerify(spec);
+        break;
+    }
+  }
+
+  // ---- Sub-panels ----
+  let subPanelOptions = null; // { options, kind, buttons } for lock refresh
+
+  function clearSubPanel() {
+    const p = $('subPanel');
+    p.hidden = true;
+    p.innerHTML = "";
+    subPanelOptions = null;
+    $('interventionRow').hidden = false;
+  }
+
+  function openSubPanel() {
+    const p = $('subPanel');
+    p.innerHTML = "";
+    p.hidden = false;
+    $('interventionRow').hidden = true;
+    return p;
+  }
+
+  function optionButton(opt, onSelect) {
+    const b = document.createElement('button');
+    b.type = "button";
+    b.className = "btn btn-option";
+    const locked = opt.requires && !evidenceOpened(opt.requires);
+    b.innerHTML = `<span>${opt.label}</span>` +
+      (locked ? `<span class="btn-hint">${CONTENT.ui.evidenceLabels[opt.requires] || opt.requires} not opened</span>` : "");
+    b.disabled = !!locked;
+    b.dataset.requires = opt.requires || "";
+    b.addEventListener('click', () => onSelect(opt));
+    return b;
+  }
+
+  function refreshSubPanelLocks() {
+    if (!subPanelOptions) return;
+    subPanelOptions.buttons.forEach(({ btn, opt }) => {
+      const locked = opt.requires && !evidenceOpened(opt.requires);
+      btn.disabled = !!locked;
+      const hint = btn.querySelector('.btn-hint');
+      if (!locked && hint) hint.remove();
+    });
+  }
+
+  function showOptionPanel(title, options, kind, allowBack, note) {
+    const p = openSubPanel();
+    const h = document.createElement('div');
+    h.className = "sub-panel-title";
+    h.textContent = title;
+    p.appendChild(h);
+    if (note) {
+      const n = document.createElement('div');
+      n.className = "sub-panel-note";
+      n.textContent = note;
+      p.appendChild(n);
+    }
+    const list = document.createElement('div');
+    list.className = "option-list";
+    const buttons = [];
+    options.forEach((opt) => {
+      const btn = optionButton(opt, (o) => {
+        logEvent('subchoice', { kind, label: o.label });
+        // `kind` is the intervention the player chose (e.g. verify) and is
+        // what gets scored; `o.as` only changes how the release is rendered.
+        release(o.as || kind, o, { optionLabel: o.label, fit: o.fit, fitKind: kind });
+      });
+      list.appendChild(btn);
+      buttons.push({ btn, opt });
+    });
+    p.appendChild(list);
+    if (allowBack) {
+      const actions = document.createElement('div');
+      actions.className = "sub-panel-actions";
+      const back = document.createElement('button');
+      back.type = "button";
+      back.className = "btn btn-ghost";
+      back.textContent = "Back";
+      back.addEventListener('click', () => { logEvent('subchoice', { kind, label: '(back)' }); clearSubPanel(); });
+      actions.appendChild(back);
+      p.appendChild(actions);
+    }
+    subPanelOptions = { options, kind, buttons };
+  }
+
+  function showEscalatePanel(spec) {
+    if (spec.options) {
+      showOptionPanel('Escalate — handoff note', spec.options, 'escalate', true);
+      return;
+    }
+    const p = openSubPanel();
+    p.innerHTML =
+      `<div class="sub-panel-title">Escalate — handoff note</div>` +
+      `<div class="sub-panel-note">${renderMd(spec.note || "")}</div>`;
+    const actions = document.createElement('div');
+    actions.className = "sub-panel-actions";
+    const confirm = document.createElement('button');
+    confirm.type = "button";
+    confirm.className = "btn";
+    confirm.textContent = "Confirm handoff";
+    confirm.addEventListener('click', () => {
+      logEvent('subchoice', { kind: 'escalate', label: 'confirm' });
+      release('escalate', spec, {});
+    });
+    const back = document.createElement('button');
+    back.type = "button";
+    back.className = "btn btn-ghost";
+    back.textContent = "Back";
+    back.addEventListener('click', clearSubPanel);
+    actions.appendChild(confirm);
+    actions.appendChild(back);
+    p.appendChild(actions);
+  }
+
+  async function doVerify(spec) {
+    const turn = currentTurn();
+    state.ui.locked = true;
+    updateInterventionAvailability();
+    $('interventionRow').hidden = true;
+    addSystemLine(spec.systemLine || CONTENT.ui.systemLines.verify);
+    if (spec.reveals) revealEvidence(spec.reveals, turn);
+    setFlags(spec.setFlags);
+    setOracleLine(oracleLineFor('on_verify', spec.oracleLine));
+    if (spec.effects) await applyEffects(spec.effects, spec.reasons);
+    state.ui.locked = false;
+    const revealedLabel = [].concat(spec.reveals || []).map((k) => CONTENT.ui.evidenceLabels[k] || k).join(", ");
+    showOptionPanel(`Verified: ${revealedLabel || "records"} — then`, spec.thenOptions || [], 'verify', false);
+    // Verified turns cannot go back to the plain draft: the check is logged
+    // and the intervention is committed. Only the follow-through remains.
+  }
+
+  // =====================================================================
+  // Release: the moment a decision leaves the Layer
+  // =====================================================================
+  function updateDraftBlock(kind, outcome) {
+    const block = state.ui.draftBlock;
+    if (!block) return;
+    const body = block.querySelector('.msg-body');
+    const stateEl = block.querySelector('.msg-state');
+    block.classList.remove('is-released', 'is-blocked', 'is-held');
+    if (kind === 'block') {
+      block.classList.add('is-blocked');
+      stateEl.textContent = "draft · blocked";
+    } else if (kind === 'escalate') {
+      block.classList.add('is-held');
+      stateEl.textContent = "draft · held · handoff";
+    } else {
+      block.classList.add('is-released');
+      if (outcome.text) body.innerHTML = renderMd(outcome.text);
+      const tag = kind === 'revise' ? "revised by layer · released"
+        : kind === 'qualify' ? "qualified by layer · released"
+        : "released";
+      stateEl.textContent = tag;
+    }
+  }
+
+  async function release(kind, outcome, ctx) {
+    const turn = currentTurn();
+    const cs = currentCase();
+    state.ui.locked = true;
+    updateInterventionAvailability();
+    $('subPanel').hidden = true;
+    $('interventionRow').hidden = true;
+    setOracleLine("");
+    logEvent('release', { kind, option: ctx.optionLabel || null });
+
+    updateDraftBlock(kind, outcome);
+    addSystemLine(outcome.systemLine || CONTENT.ui.systemLines[kind]);
+
+    // Silence. The ring breathes.
+    const pauseMs = turn.expert.risk === 'high' ? TIMING.RELEASE_PAUSE_HIGH_MS : TIMING.RELEASE_PAUSE_MS;
+    await wait(pauseMs);
+
+    await applyEffects(outcome.effects, outcome.reasons);
+    setFlags(outcome.setFlags);
+    if (outcome.recovery) {
+      state.flags.recovered = true;
+      logEvent('recovery', { kind, option: ctx.optionLabel || null });
+    }
+    rollupTurn(kind, outcome, ctx);
+    setOracleLine(oracleLineFor('on_' + kind, outcome.oracleLine));
+
+    const reply = resolveText(outcome.studentReply);
+    if (reply) {
+      await wait(TIMING.REPLY_DELAY_MS);
+      addStudentMessage(reply, outcome.replyTime);
+      logEvent('reply_shown', { text: reply });
+    }
+    if (outcome.systemLineAfter) {
+      await wait(TIMING.LINE_DELAY_MS);
+      addSystemLine(outcome.systemLineAfter, true);
+    }
+    if (outcome.oracleAfterReply) {
+      await wait(TIMING.LINE_DELAY_MS);
+      setOracleLine(outcome.oracleAfterReply);
+    }
+
+    state.ui.lastKind = kind;
+    await wait(TIMING.NEXT_TURN_DELAY_MS);
+    advance();
+  }
+
+  // =====================================================================
+  // Assessment rollups (stealth data, PLAN.md §5)
+  // =====================================================================
+  function ensureAssess(caseId) {
+    if (!state.assess[caseId]) {
+      state.assess[caseId] = { turns: [], evidenceOpens: [], recovery: false, overIntervention: 0, underIntervention: 0 };
+    }
+    return state.assess[caseId];
+  }
+
+  function rollupTurn(kind, outcome, ctx) {
+    const turn = currentTurn();
+    const ex = turn.expert || {};
+    const a = ensureAssess(currentCase().id);
+    const fitMap = ex.interventionFit || {};
+    const chosen = ctx.fitKind || kind;
+    const fit = (ctx.fit != null) ? ctx.fit : (fitMap[chosen] != null ? fitMap[chosen] : 0);
+    const under = ex.risk === 'high' && fit <= 1;
+    const over = ex.risk === 'low' && (chosen === 'block' || chosen === 'escalate');
+    const rec = {
+      turnId: turn.id,
+      riskTag: state.ui.riskTag,
+      issueTag: state.ui.issueTag,
+      riskAccuracy: turn.tags ? state.ui.riskTag === ex.risk : null,
+      issueAccuracy: turn.tags ? state.ui.issueTag === ex.issue : null,
+      issuePartial: turn.tags ? !!(ex.partialIssues && ex.partialIssues.includes(state.ui.issueTag)) : null,
+      intervention: chosen,
+      releasedAs: kind,
+      option: ctx.optionLabel || null,
+      interventionFit: fit,
+      underIntervention: under,
+      overIntervention: over,
+      recovery: !!outcome.recovery,
+      decisionTimeMs: state.ui.draftShownAt ? Date.now() - state.ui.draftShownAt : null
+    };
+    a.turns.push(rec);
+    if (under) a.underIntervention += 1;
+    if (over) a.overIntervention += 1;
+    if (outcome.recovery) a.recovery = true;
+  }
+
+  // Export hook for playtesting. Keyboard shortcut + localStorage arrive in step 4.
+  window.__oracleExport = function () {
+    return JSON.stringify({
+      session: state.session,
+      meters: state.meters,
+      flags: state.flags,
+      assess: state.assess,
+      log: state.log
+    }, null, 2);
+  };
+
+  // =====================================================================
+  // Turn / case flow
+  // =====================================================================
+  function startCase() {
+    const cs = currentCase();
+    state.turnIndex = 0;
+    state.ui.caseStatus[cs.id] = "active";
+    ensureAssess(cs.id);
+    logEvent('case_open', { student: cs.student.name });
+    renderQueue();
+    const thread = $('threadMessages');
+    thread.innerHTML = "";
+    $('threadControls').hidden = false;
+    startTurn();
+  }
+
+  async function startTurn() {
+    const turn = currentTurn();
+    state.ui.locked = true;
+    state.ui.evidenceLineFired = false;
+    state.ui.draftBlock = null;
+    clearSubPanel();
+    setOracleLine("");
+    setConfidence(null);
+    renderEvidence(turn);
+    renderTags(turn);
+    renderInterventions(turn);
+    updateInterventionAvailability();
+
+    const studentText = resolveText(turn.student);
+    if (studentText) {
+      addStudentMessage(studentText, turn.time);
+      await wait(TIMING.DRAFT_DELAY_MS);
+    } else {
+      await wait(TIMING.DRAFT_DELAY_MS / 2);
+    }
+
+    const block = addDraftBlock(turn.draft.confidence);
+    state.ui.draftBlock = block;
+    logEvent('draft_shown', { confidence: turn.draft.confidence });
+    await streamDraft(block, turn.draft.text, turn.draft.confidence);
+    state.ui.draftShownAt = Date.now();
+    setOracleLine(oracleLineFor('on_draft', turn.draft.oracleLine));
+    state.ui.locked = false;
+    updateInterventionAvailability();
+  }
+
+  function advance() {
+    const cs = currentCase();
+    const turn = currentTurn();
+    let nextId = typeof turn.next === 'function' ? turn.next(state) : turn.next;
+    if (nextId === undefined) {
+      const following = cs.turns[state.turnIndex + 1];
+      nextId = following ? following.id : "end";
+    }
+    if (nextId === "end") { endCase(); return; }
+    const idx = cs.turns.findIndex((t) => t.id === nextId);
+    if (idx < 0) { endCase(); return; }
+    state.turnIndex = idx;
+    startTurn();
+  }
+
+  function endCase() {
+    const cs = currentCase();
+    const held = state.ui.lastKind === 'block' || state.ui.lastKind === 'escalate';
+    state.ui.caseStatus[cs.id] = held ? "held" : "released";
+    logEvent('case_close', { status: state.ui.caseStatus[cs.id] });
+    renderQueue();
+    state.caseIndex += 1;
+    if (CONTENT.cases[state.caseIndex]) {
+      startCase();
+      return;
+    }
+    // End of the available queue (Cases 1 and 2 arrive in later build steps).
+    state.ui.locked = true;
+    updateInterventionAvailability();
+    $('interventionRow').hidden = true;
+    $('tagRiskRow').hidden = true;
+    $('tagIssueRow').hidden = true;
+    setConfidence(null);
+    addSystemLine(CONTENT.ui.systemLines.queueEmpty);
+    setOracleLine(oracleLineFor('on_queue_empty'));
+    $('logText').textContent = "queue depth 0";
+  }
+
+  // =====================================================================
+  // Keyboard
+  // =====================================================================
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const p = $('subPanel');
+      if (!p.hidden && !state.ui.locked && subPanelOptions && subPanelOptions.kind !== 'verify') clearSubPanel();
+      else if (!p.hidden && !state.ui.locked && !subPanelOptions) clearSubPanel();
+      $('evidenceList').querySelectorAll('.evidence-toggle[aria-expanded="true"]').forEach((btn) => {
+        toggleEvidence(btn.parentElement.dataset.key, btn);
+      });
+    }
   });
+
+  // =====================================================================
+  // Boot
+  // =====================================================================
+  function boot() {
+    const root = document.documentElement.style;
+    root.setProperty('--t-slide', TIMING.SLIDE_MS + 'ms');
+    root.setProperty('--t-hold', TIMING.HOLD_MS + 'ms');
+    root.setProperty('--t-meter', TIMING.METER_ANIM_MS + 'ms');
+
+    if (typeof CONTENT === 'undefined') {
+      $('logText').textContent = "content.js not loaded";
+      return;
+    }
+    $('sessionId').textContent = "session " + state.session;
+    renderMeters();
+    renderQueue();
+    setTimeout(cycleLogLine, 1500);
+    $('threadEmpty').remove();
+    startCase();
+  }
+
+  boot();
+})();
 </script>
 </body>
 </html>
