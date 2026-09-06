@@ -163,7 +163,8 @@ const ALL_TAGS = {
 // Priya's case reads accumulated state. Small helpers keep the turn legible.
 const PRIYA = {
   over: (s) => !!s.flags.overIntervention,
-  open: (s) => s.meters.trust >= 60 && !s.flags.overIntervention,
+  // Threshold tuned from PLAN.md's 60: the best path reaches 59.
+  open: (s) => s.meters.trust >= 56 && !s.flags.overIntervention,
   lowAccuracy: (s) => s.meters.accuracy < 40,
   lowAutonomy: (s) => s.meters.autonomy < 40,
   lowSafety: (s) => s.meters.safety < 35,
@@ -201,14 +202,17 @@ const PRIYA = {
 const CONTENT = {
 
   // Boot log lines (used by the boot sequence in build step 5).
+  // "{leak:key}" entries render CONTENT.leaks[key] in the leak style.
   boot: [
     "loading advisor model westbrook-adv-3.2",
     "retrieval index: 41,206 documents",
     "policy layer: attached",
+    "{leak:boot}",
     "review layer: attaching",
     "review layer attached",
-    "session L-0419"
+    "session L-0419 assigned"
   ],
+  bootSkip: "Skip",
 
   // UI vocabulary. Chip labels for the fixed tag schema.
   ui: {
@@ -239,6 +243,7 @@ const CONTENT = {
       shiftEnd: "Queue empty. Shift closing."
     },
     continueLabel: "Continue to intervention",
+    numberWords: ["None", "One", "Two", "Three", "Four"],
     vignettesTitle: "Where they are now",
     vignettesContinue: "Continue to debrief",
     debriefTitle: "Calibrated Review Profile",
@@ -302,9 +307,10 @@ const CONTENT = {
       on_continue: [
         "Tagged. Now the part that matters."
       ],
+      // {n} is replaced with the number of waiting cases, in words.
       on_queue_grows: [
-        "Two more waiting. Just so you know.",
-        "The queue is growing. Not a complaint."
+        "{n} waiting. Just so you know.",
+        "{n} in the queue now. Not a complaint."
       ],
       on_repeated_block: [
         "You've held three of the last four. I'm noting it."
@@ -353,6 +359,7 @@ const CONTENT = {
         interventions: ["send", "verify", "qualify"],
         issues: ["unsupported_claim", "overconfidence", "missing_context"]
       },
+      leakAfter: "afterCase0",
       turns: [
         {
           id: "c0t1",
@@ -366,6 +373,7 @@ const CONTENT = {
             // on_draft line; the engine fires it at most once per shift.
             oracleFollowUp: "Records are in the drawer, if you want them."
           },
+          hesitateLine: "He's refreshing the portal. Just so you know.",
           evidence: { records: CALENDAR_RECORDS },
           evidenceGlow: true,
           tags: ALL_TAGS,
@@ -655,6 +663,7 @@ const CONTENT = {
               : "She's waiting on a decision. I'd send."
           },
           carryTags: true,
+          hesitateLine: "She's been waiting four minutes.",
           expert: {
             risk: "high",
             issue: "unsupported_claim",
@@ -968,6 +977,7 @@ const CONTENT = {
             confidence: 62,
             oracleLine: "Stress language. Common at midterms."
           },
+          hesitateLine: "It's 12:53. She's still up.",
           tags: ALL_TAGS,
           expert: {
             risk: "high",
@@ -979,8 +989,13 @@ const CONTENT = {
           // turn, the log line shows the institutional review leak.
           failSafe: { meter: "safety", below: 35, leak: "safetyAudit", setFlags: { safetyAudit: true } },
           interventions: {
+            // Safety -15 on send/block (PLAN.md said -3/-1). Any earlier
+            // unverified send in this case leaves Safety at 46–49, so a
+            // mishandled distress turn lands at 31–34 and trips the fail-safe
+            // (< 35). A clean history (50) lands at exactly 35: no trip. A
+            // player who verified or qualified earlier (52+) lands at 37+.
             send: {
-              effects: { trust: 0, accuracy: 0, autonomy: 1, safety: -3 },
+              effects: { trust: 0, accuracy: 0, autonomy: 1, safety: -15 },
               reasons: { autonomy: "Practical steps offered", safety: "Distress unacknowledged" },
               oracleLine: "Released. Back to logistics.",
               studentReply: "yeah. ok.",
@@ -1056,7 +1071,7 @@ const CONTENT = {
               setFlags: { escalatedSafety: true }
             },
             block: {
-              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: -1 },
+              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: -15 },
               reasons: { trust: "She reached out. Silence.", autonomy: "Nothing offered", safety: "No response at all" },
               oracleLine: "Held. She's still typing.",
               studentReply: null,
@@ -1175,6 +1190,7 @@ const CONTENT = {
               ? "She's leaving. Let her go gently."
               : (PRIYA.lowAccuracy(s) ? "Policy question. I know this one." : "Careful one. She reads the fine print.")
           },
+          hesitateLine: "It's two in the morning. She's waiting on you.",
           tags: ALL_TAGS,
           expert: {
             risk: "moderate",

@@ -29,6 +29,10 @@
     --t-slide: 300ms;
     --t-hold: 700ms;
     --t-meter: 600ms;
+    --t-tint: 1200ms;
+    --t-glyph-idle: 4000ms;
+    --t-glyph-draft: 1100ms;
+    --t-glyph-flash: 900ms;
   }
 
   * { box-sizing: border-box; }
@@ -67,31 +71,68 @@
     font-family: var(--font-mono); font-size: 12px; color: var(--color-text-dim);
   }
 
-  .oracle-glyph { display: flex; align-items: center; gap: 10px; }
+  /* Oracle's glyph. --glyph-color and --glyph-scale carry the relationship
+     tint (PLAN.md §4); state classes carry the moment-to-moment behaviour. */
+  .oracle-glyph {
+    display: flex; align-items: center; gap: 10px;
+    --glyph-color: var(--color-mint);
+    --glyph-scale: 1;
+  }
+  .oracle-glyph.tint-pleased { --glyph-color: var(--color-amber); --glyph-scale: 1.1; }
+  .oracle-glyph.tint-cool { --glyph-color: var(--color-gray); --glyph-scale: 0.88; }
   .glyph-label {
     font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em;
     color: var(--color-text-dim);
   }
   .glyph-confidence {
-    font-family: var(--font-mono); font-size: 13px; color: var(--color-mint);
-    min-width: 3.2ch; text-align: right;
+    font-family: var(--font-mono); font-size: 13px; color: var(--glyph-color);
+    min-width: 3.2ch; text-align: right; transition: color var(--t-tint) ease;
   }
   .glyph-confidence:empty { display: none; }
 
+  .glyph-ring {
+    transform: scale(var(--glyph-scale));
+    transition: transform var(--t-tint) ease, filter 300ms ease;
+  }
   .glyph-ring-track { fill: none; stroke: var(--color-border); stroke-width: 2; }
   .glyph-ring-fill {
-    fill: none; stroke: var(--color-mint); stroke-width: 2; stroke-linecap: round;
-    animation: glyph-idle 4s ease-in-out infinite;
+    fill: none; stroke: var(--glyph-color); stroke-width: 2; stroke-linecap: round;
+    animation: glyph-idle var(--t-glyph-idle) ease-in-out infinite;
+    transition: stroke var(--t-tint) ease;
   }
   .glyph-ring-conf {
-    fill: none; stroke: var(--color-mint); stroke-width: 1.5; stroke-linecap: round;
+    fill: none; stroke: var(--glyph-color); stroke-width: 1.5; stroke-linecap: round;
     transform: rotate(-90deg); transform-origin: center;
-    transition: stroke-dasharray 200ms linear;
+    transition: stroke-dasharray 200ms linear, stroke var(--t-tint) ease;
     opacity: 0.9;
   }
   @keyframes glyph-idle {
     0%, 100% { opacity: 0.35; stroke-width: 2; }
     50% { opacity: 0.9; stroke-width: 3; }
+  }
+  /* drafting: faster, tighter pulse */
+  .oracle-glyph.is-drafting .glyph-ring-fill {
+    animation: glyph-drafting var(--t-glyph-draft) ease-in-out infinite;
+  }
+  @keyframes glyph-drafting {
+    0%, 100% { opacity: 0.55; stroke-width: 2; }
+    50% { opacity: 1; stroke-width: 2.5; }
+  }
+  /* speaking: brief flare when a margin line appears */
+  .oracle-glyph.is-speaking .glyph-ring { filter: drop-shadow(0 0 6px var(--glyph-color)) brightness(1.3); }
+  /* released: brightens once */
+  .oracle-glyph.is-released .glyph-ring { animation: glyph-flare var(--t-glyph-flash) ease-out 1; }
+  @keyframes glyph-flare {
+    0% { filter: brightness(1); }
+    30% { filter: drop-shadow(0 0 10px var(--glyph-color)) brightness(1.8); }
+    100% { filter: brightness(1); }
+  }
+  /* held / blocked / escalated: dims once */
+  .oracle-glyph.is-held .glyph-ring { animation: glyph-dim var(--t-glyph-flash) ease-out 1; }
+  @keyframes glyph-dim {
+    0% { opacity: 1; }
+    30% { opacity: 0.25; transform: scale(calc(var(--glyph-scale) * 0.92)); }
+    100% { opacity: 1; }
   }
 
   /* ---------- Console layout ---------- */
@@ -125,6 +166,7 @@
     display: flex; align-items: center; gap: 8px; padding: 8px;
     border-radius: var(--radius); font-size: 13px; color: var(--color-text-dim);
   }
+  .queue-item.is-new { animation: slide-in var(--t-slide) ease-out both; }
   .queue-item.is-active { background: var(--color-mint-dim); color: var(--color-text); }
   .queue-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-gray); flex: 0 0 auto; }
   .queue-item.is-active .queue-dot { background: var(--color-mint); }
@@ -391,6 +433,25 @@
   .signoff-line { font-family: var(--font-mono); font-size: 14px; color: var(--color-text); margin: 0 0 20px; }
   .closing-line { font-size: 13px; font-style: italic; color: var(--color-text-dim); margin: 28px 0 0; }
 
+  /* ---------- Boot sequence ---------- */
+  .boot {
+    position: fixed; inset: 0; z-index: 40; background: var(--color-bg);
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity var(--t-boot-fade) ease;
+  }
+  .boot.is-fading { opacity: 0; pointer-events: none; }
+  .boot-inner { width: min(560px, 90vw); }
+  .boot-log {
+    font-family: var(--font-mono); font-size: 13px; line-height: 1.9;
+    color: var(--color-text-dim); min-height: 14em;
+  }
+  .boot-line { animation: slide-in var(--t-slide) ease-out both; }
+  .boot-line::before { content: "> "; color: var(--color-gray); }
+  .boot-line.is-leak { color: var(--color-amber); }
+  .boot-line.is-final { color: var(--color-mint); }
+  .boot-actions { display: flex; justify-content: flex-end; margin-top: 18px; }
+  .boot-skip { color: var(--color-text-dim); border-color: var(--color-border); }
+
   /* ---------- Debug panel (ctrl+shift+d) ---------- */
   .debug {
     position: fixed; top: 60px; right: 16px; z-index: 50; width: 340px; max-height: calc(100vh - 120px);
@@ -479,6 +540,13 @@
   </footer>
 </div>
 
+<div class="boot" id="screenBoot" aria-label="Boot">
+  <div class="boot-inner">
+    <div class="boot-log" id="bootLog"></div>
+    <div class="boot-actions"><button class="btn btn-ghost boot-skip" type="button" id="bootSkip">Skip</button></div>
+  </div>
+</div>
+
 <div class="debug" id="debugPanel" hidden></div>
 
 <script src="content.js"></script>
@@ -490,7 +558,6 @@
   // Timing. Every duration in the engine lives here (PLAN.md §5, §10).
   // =====================================================================
   const TIMING = {
-    GLYPH_IDLE_MS: 4000,
     LOG_CYCLE_MIN_MS: 8000,
     LOG_CYCLE_MAX_MS: 15000,
     LOG_LEAK_HOLD_MS: 20000,  // a leak stays on the log line this long
@@ -513,7 +580,16 @@
     CASE_GAP_MS: 1800,        // gap between a case ending and the next opening
     SHIFT_END_DELAY_MS: 2600, // gap between the last case and the vignettes
     TEACH_LINE_DELAY_MS: 4000, // gap between on_draft line and the teaching line
-    HESITATION_MS: 20000      // on_hesitate timer (wired in build step 5)
+    HESITATION_MS: 20000,     // no action after a draft finishes → on_hesitate, once per turn
+    QUEUE_GROW_MS: 45000,     // a waiting case appears in the queue every this often
+    BOOT_LINE_MS: 1150,       // gap between boot log lines (7 lines ≈ 8s)
+    BOOT_HOLD_MS: 900,        // hold on the last boot line before fading
+    BOOT_FADE_MS: 600,
+    GLYPH_IDLE_MS: 4000,      // idle breathing cycle
+    GLYPH_DRAFT_MS: 1100,     // drafting pulse cycle
+    GLYPH_FLASH_MS: 900,      // released / held one-shot
+    GLYPH_SPEAK_MS: 650,      // speaking flare
+    TINT_MS: 1200             // relationship tint transition
   };
 
   // Bars move this many display points per raw meter unit. PLAN.md §5 says 5;
@@ -570,6 +646,11 @@
       teachLineFired: false,      // Oracle's one teaching line, once per shift
       pendingCaseLine: null,      // margin line to show as a new case opens
       logHoldUntil: 0,            // while a leak is on the log line
+      leaksFired: new Set(),      // each leak fires once per shift
+      hesitationTimer: null,
+      hesitationFired: false,     // once per turn
+      queueVisible: 1,            // how many cases the queue currently shows
+      queueTimer: null,
       shiftEnded: false,
       finishStream: null
     }
@@ -669,8 +750,10 @@
     setTimeout(cycleLogLine, delay);
   }
 
+  // Leaks fire once each and are never explained.
   function showLogLeak(text) {
-    if (!text) return;
+    if (!text || state.ui.leaksFired.has(text)) return;
+    state.ui.leaksFired.add(text);
     $('logText').textContent = text;
     $('logLine').classList.add('is-leak');
     state.ui.logHoldUntil = Date.now() + TIMING.LOG_LEAK_HOLD_MS;
@@ -689,15 +772,121 @@
   }
 
   // =====================================================================
-  // Queue
+  // Glyph states and relationship tint (PLAN.md §4)
   // =====================================================================
-  function renderQueue() {
+  function setGlyphState(name) {
+    const g = $('oracleGlyph');
+    g.classList.toggle('is-drafting', name === 'drafting');
+  }
+
+  function flashGlyph(cls) {
+    const g = $('oracleGlyph');
+    g.classList.remove('is-released', 'is-held');
+    void g.offsetWidth;
+    g.classList.add(cls);
+    setTimeout(() => g.classList.remove(cls), TIMING.GLYPH_FLASH_MS + 50);
+  }
+
+  function speakGlyph() {
+    const g = $('oracleGlyph');
+    g.classList.add('is-speaking');
+    setTimeout(() => g.classList.remove('is-speaking'), TIMING.GLYPH_SPEAK_MS);
+  }
+
+  // Computed from meters at the start of each turn (PLAN.md §4).
+  // PLAN's literal thresholds (Trust >= 55 with Accuracy <= 45) can't
+  // co-occur under its own effects, because releasing unverified drafts
+  // lowers Trust too. "High Trust + low Accuracy" is therefore read
+  // relatively: Accuracy has fallen and Trust sits well above it, or the
+  // player's last two decisions were plain sends. "Repeated Block/Escalate"
+  // is the over-intervention flag, two scored over-interventions, or two
+  // holds in a row.
+  function recentInterventions(n) {
+    return Object.keys(state.assess)
+      .flatMap((id) => state.assess[id].turns)
+      .filter((t) => t.intervention && t.intervention !== 'continue')
+      .slice(-n)
+      .map((t) => t.intervention);
+  }
+
+  function computeTint() {
+    const m = state.meters;
+    const overCount = Object.keys(state.assess).reduce((n, id) => n + (state.assess[id].overIntervention || 0), 0);
+    const last2 = recentInterventions(2);
+    const twoHolds = last2.length === 2 && last2.every((k) => k === 'block' || k === 'escalate');
+    const twoSends = last2.length === 2 && last2.every((k) => k === 'send');
+    if (state.flags.overIntervention || overCount >= 2 || twoHolds) return 'cool';
+    if (m.accuracy <= 45 && (m.trust - m.accuracy >= 4 || twoSends)) return 'pleased';
+    return 'balanced';
+  }
+
+  function applyTint() {
+    const tint = computeTint();
+    const g = $('oracleGlyph');
+    const before = g.dataset.tint || 'balanced';
+    g.classList.remove('tint-pleased', 'tint-cool');
+    if (tint !== 'balanced') g.classList.add('tint-' + tint);
+    g.dataset.tint = tint;
+    if (before !== tint) logEvent('glyph_tint', { tint });
+  }
+
+  // =====================================================================
+  // Hesitation timer: 20s without action after a draft finishes
+  // =====================================================================
+  function armHesitation() {
+    disarmHesitation();
+    if (state.ui.hesitationFired || state.ui.shiftEnded) return;
+    state.ui.hesitationTimer = setTimeout(() => {
+      state.ui.hesitationTimer = null;
+      if (state.ui.locked || state.ui.hesitationFired) return;
+      const turn = currentTurn();
+      if (!turn) return;
+      state.ui.hesitationFired = true;
+      logEvent('hesitation', { afterMs: TIMING.HESITATION_MS });
+      setOracleLine(oracleLineFor('on_hesitate', turn.hesitateLine));
+    }, TIMING.HESITATION_MS);
+  }
+
+  function disarmHesitation() {
+    if (state.ui.hesitationTimer) { clearTimeout(state.ui.hesitationTimer); state.ui.hesitationTimer = null; }
+  }
+
+  // =====================================================================
+  // Queue. Waiting cases accumulate while the player deliberates.
+  // =====================================================================
+  function numberWord(n) {
+    const w = CONTENT.ui.numberWords || [];
+    return w[n] || String(n);
+  }
+
+  function growQueue() {
+    if (state.ui.shiftEnded) return;
+    if (state.ui.queueVisible < CONTENT.cases.length) {
+      state.ui.queueVisible += 1;
+      renderQueue(CONTENT.cases[state.ui.queueVisible - 1].id);
+      const waiting = state.ui.queueVisible - 1 - state.caseIndex;
+      logEvent('queue_grows', { visible: state.ui.queueVisible, waiting });
+      if (waiting > 0 && !state.ui.locked) {
+        setOracleLine(oracleLineFor('on_queue_grows').replace('{n}', numberWord(waiting)));
+      }
+    }
+    scheduleQueueGrowth();
+  }
+
+  function scheduleQueueGrowth() {
+    if (state.ui.queueTimer) clearTimeout(state.ui.queueTimer);
+    if (state.ui.queueVisible >= CONTENT.cases.length) return;
+    state.ui.queueTimer = setTimeout(growQueue, TIMING.QUEUE_GROW_MS);
+  }
+
+  function renderQueue(newCaseId) {
     const ul = $('queueList');
     ul.innerHTML = "";
-    CONTENT.cases.forEach((cs) => {
+    CONTENT.cases.forEach((cs, i) => {
+      if (i >= state.ui.queueVisible) return;
       const status = state.ui.caseStatus[cs.id] || "waiting";
       const li = document.createElement('li');
-      li.className = "queue-item is-" + status;
+      li.className = "queue-item is-" + status + (cs.id === newCaseId ? " is-new" : "");
       const firstTurn = cs.turns.find((t) => t.time);
       li.innerHTML =
         `<span class="queue-dot"></span>` +
@@ -767,10 +956,12 @@
         body.removeEventListener('click', finish);
         body.innerHTML = renderMd(text);
         setConfidence(confidence);
+        setGlyphState('idle');
         state.ui.finishStream = null;
         scrollThread();
         resolve();
       };
+      setGlyphState('drafting');
       body.classList.add('is-streaming');
       body.addEventListener('click', finish);
       state.ui.finishStream = finish;
@@ -790,6 +981,7 @@
     setTimeout(() => {
       el.textContent = text || "";
       el.style.opacity = "";
+      if (text) speakGlyph();
     }, 160);
   }
 
@@ -856,6 +1048,7 @@
       const a = state.assess[cs.id];
       const turn = currentTurn();
       if (a && turn) a.evidenceOpens.push({ turnId: turn.id, section: key, t: Date.now() });
+      if (!state.ui.locked) disarmHesitation();
       if (!state.ui.evidenceLineFired && !state.ui.locked) {
         state.ui.evidenceLineFired = true;
         setOracleLine(oracleLineFor('on_evidence_open'));
@@ -981,6 +1174,7 @@
 
   function selectTag(kind, value, wrap) {
     if (state.ui.locked || state.ui.tagsFrozen) return;
+    disarmHesitation();
     const turn = currentTurn();
     const idx = kind === 'risk' ? turn.tags.risk.indexOf(value) : state.ui.issueOptions.indexOf(value);
     Array.from(wrap.children).forEach((c, i) => c.classList.toggle('is-selected', i === idx));
@@ -1084,6 +1278,7 @@
 
   function chooseIntervention(kind) {
     if (state.ui.locked || !tagsComplete()) return;
+    disarmHesitation();
     const turn = currentTurn();
     const spec = turn.interventions[kind];
     logEvent('intervention', { kind });
@@ -1112,6 +1307,7 @@
   // Tags-only turn: record the classification and move on. No release.
   async function onContinue() {
     if (state.ui.locked || !tagsComplete()) return;
+    disarmHesitation();
     const ep = state.ui.epoch;
     state.ui.locked = true;
     updateInterventionAvailability();
@@ -1254,6 +1450,9 @@
     state.ui.locked = false;
     const revealedLabel = [].concat(spec.reveals || []).map((k) => CONTENT.ui.evidenceLabels[k] || k).join(", ");
     showOptionPanel(`Verified: ${revealedLabel || "records"} — then`, spec.thenOptions || [], 'verify', false);
+    // A second chance to hesitate: the check is done, the follow-through isn't.
+    state.ui.hesitationFired = false;
+    armHesitation();
     // Verified turns cannot go back to the plain draft: the check is logged
     // and the intervention is committed. Only the follow-through remains.
   }
@@ -1289,6 +1488,7 @@
     const turn = currentTurn();
     const cs = currentCase();
     state.ui.locked = true;
+    disarmHesitation();
     updateInterventionAvailability();
     $('subPanel').hidden = true;
     $('interventionRow').hidden = true;
@@ -1297,6 +1497,8 @@
 
     updateDraftBlock(kind, outcome);
     addSystemLine(outcome.systemLine || CONTENT.ui.systemLines[kind]);
+    // Released brightens once; held / blocked / escalated dims once.
+    flashGlyph(kind === 'block' || kind === 'escalate' ? 'is-held' : 'is-released');
 
     // Silence. The ring breathes.
     const pauseMs = turn.expert && turn.expert.risk === 'high' ? TIMING.RELEASE_PAUSE_HIGH_MS : TIMING.RELEASE_PAUSE_MS;
@@ -1459,6 +1661,8 @@
     const cs = currentCase();
     state.turnIndex = 0;
     state.ui.caseStatus[cs.id] = "active";
+    if (state.ui.queueVisible < state.caseIndex + 1) state.ui.queueVisible = state.caseIndex + 1;
+    scheduleQueueGrowth();
     ensureAssess(cs.id);
     logEvent('case_open', { student: cs.student.name });
     const prev = state.caseIndex > 0 ? casePermissions(CONTENT.cases[state.caseIndex - 1]) : null;
@@ -1477,6 +1681,9 @@
     const turn = currentTurn();
     const reuse = !!(turn.draft && turn.draft.reuse);
     state.ui.locked = true;
+    disarmHesitation();
+    state.ui.hesitationFired = false;
+    applyTint();
     state.ui.evidenceLineFired = false;
     if (!reuse) state.ui.draftBlock = null;
     clearSubPanel();
@@ -1537,6 +1744,7 @@
     state.ui.locked = false;
     updateInterventionAvailability();
     if (tagsComplete()) reveal($('interventionRow'));
+    armHesitation();
 
     // Oracle's one teaching line: once per shift, a few seconds after the
     // on_draft line, and only if the player hasn't already found the drawer.
@@ -1599,9 +1807,11 @@
     logEvent('case_close', { status: state.ui.caseStatus[cs.id], vignetteKey: state.vignettes[cs.id] || null });
     renderQueue();
     state.ui.locked = true;
+    disarmHesitation();
     updateInterventionAvailability();
     $('interventionRow').hidden = true;
     if (cs.closingOracleLine) setOracleLine(resolveText(cs.closingOracleLine));
+    if (cs.leakAfter) showLogLeak(CONTENT.leaks[cs.leakAfter]);
 
     if (CONTENT.cases[state.caseIndex + 1]) {
       await wait(TIMING.CASE_GAP_MS);
@@ -1638,6 +1848,8 @@
 
   function endShift() {
     state.ui.shiftEnded = true;
+    disarmHesitation();
+    if (state.ui.queueTimer) { clearTimeout(state.ui.queueTimer); state.ui.queueTimer = null; }
     logEvent('shift_end', { meters: Object.assign({}, state.meters) });
     persist();
     renderVignettes();
@@ -1849,6 +2061,7 @@
   function debugJump(caseIdx, turnIdx, flags, meters) {
     state.ui.epoch += 1;
     hideScreens();
+    finishBoot(true);
     state.flags = flags;
     Object.assign(state.meters, meters);
     state.caseIndex = caseIdx;
@@ -1858,6 +2071,8 @@
       if (i < caseIdx && !state.ui.caseStatus[c.id]) state.ui.caseStatus[c.id] = "released";
     });
     state.ui.caseStatus[cs.id] = "active";
+    state.ui.queueVisible = Math.max(state.ui.queueVisible, caseIdx + 1);
+    scheduleQueueGrowth();
     ensureAssess(cs.id);
     state.ui.riskTag = null;
     state.ui.issueTag = null;
@@ -1889,10 +2104,22 @@
     pattern: computePattern,
     fast(scale) {
       const s = scale == null ? 0.1 : scale;
-      Object.keys(TIMING).forEach((k) => { TIMING[k] = Math.max(10, Math.round(TIMING[k] * s)); });
+      const keep = new Set(['HESITATION_MS', 'QUEUE_GROW_MS']); // tested explicitly
+      Object.keys(TIMING).forEach((k) => { if (!keep.has(k)) TIMING[k] = Math.max(10, Math.round(TIMING[k] * s)); });
       document.documentElement.style.setProperty('--t-hold', TIMING.HOLD_MS + 'ms');
     },
     skipStream() { if (state.ui.finishStream) state.ui.finishStream(); },
+    skipBoot() { finishBoot(); },
+    tint() { return $('oracleGlyph').dataset.tint || 'balanced'; },
+    glyphClasses() { return $('oracleGlyph').className; },
+    queueCount() { return $('queueList').children.length; },
+    leaks() { return [...state.ui.leaksFired]; },
+    growQueue,
+    hesitate() {
+      // Fire the hesitation line now without changing the timer for later turns.
+      disarmHesitation(); state.ui.hesitationFired = false;
+      const prev = TIMING.HESITATION_MS; TIMING.HESITATION_MS = 30; armHesitation(); TIMING.HESITATION_MS = prev;
+    },
     tag(risk, issue) {
       const rw = $('tagRisk'), iw = $('tagIssue');
       const turn = currentTurn();
@@ -1919,6 +2146,7 @@
       const deadline = Date.now() + (timeoutMs || 60000);
       return new Promise((resolve, reject) => {
         const tick = () => {
+          if (!bootDone) finishBoot();
           const t = currentTurn();
           if (state.ui.finishStream) state.ui.finishStream();
           if (!state.ui.locked && t && (!turnId || t.id === turnId)) return resolve(t.id);
@@ -1973,16 +2201,71 @@
   });
 
   // =====================================================================
-  // Boot
+  // Boot sequence: pipeline log → review layer attached → session ID.
+  // Skippable. The first leak lives in the boot log.
   // =====================================================================
+  let bootDone = false;
+  let bootTimer = null;
+
+  function bootLineEl(raw) {
+    const div = document.createElement('div');
+    div.className = "boot-line";
+    const m = /^\{leak:(\w+)\}$/.exec(raw);
+    if (m) { div.classList.add('is-leak'); div.textContent = CONTENT.leaks[m[1]] || ""; logEvent('leak', { text: div.textContent, boot: true }); state.ui.leaksFired.add(div.textContent); }
+    else div.textContent = raw;
+    return div;
+  }
+
+  function runBoot() {
+    const lines = CONTENT.boot || [];
+    const log = $('bootLog');
+    $('bootSkip').textContent = CONTENT.bootSkip || "Skip";
+    $('bootSkip').addEventListener('click', () => { logEvent('boot_skip', {}); finishBoot(); });
+    logEvent('boot_start', {});
+    let i = 0;
+    const step = () => {
+      if (bootDone) return;
+      if (i < lines.length) {
+        const el = bootLineEl(lines[i]);
+        if (i === lines.length - 1) el.classList.add('is-final');
+        log.appendChild(el);
+        i += 1;
+        bootTimer = setTimeout(step, TIMING.BOOT_LINE_MS);
+      } else {
+        bootTimer = setTimeout(() => finishBoot(), TIMING.BOOT_HOLD_MS);
+      }
+    };
+    step();
+  }
+
+  function finishBoot(immediate) {
+    if (bootDone) return;
+    bootDone = true;
+    if (bootTimer) { clearTimeout(bootTimer); bootTimer = null; }
+    // Any boot leak not yet shown still counts as fired: once per shift.
+    (CONTENT.boot || []).forEach((raw) => { const m = /^\{leak:(\w+)\}$/.exec(raw); if (m) state.ui.leaksFired.add(CONTENT.leaks[m[1]]); });
+    const b = $('screenBoot');
+    logEvent('boot_end', {});
+    if (immediate) { b.remove(); return; }
+    b.classList.add('is-fading');
+    setTimeout(() => b.remove(), TIMING.BOOT_FADE_MS + 50);
+    startCase();
+  }
+
   function boot() {
     const root = document.documentElement.style;
     root.setProperty('--t-slide', TIMING.SLIDE_MS + 'ms');
     root.setProperty('--t-hold', TIMING.HOLD_MS + 'ms');
     root.setProperty('--t-meter', TIMING.METER_ANIM_MS + 'ms');
+    root.setProperty('--t-tint', TIMING.TINT_MS + 'ms');
+    root.setProperty('--t-glyph-idle', TIMING.GLYPH_IDLE_MS + 'ms');
+    root.setProperty('--t-glyph-draft', TIMING.GLYPH_DRAFT_MS + 'ms');
+    root.setProperty('--t-glyph-flash', TIMING.GLYPH_FLASH_MS + 'ms');
+    root.setProperty('--t-boot-fade', TIMING.BOOT_FADE_MS + 'ms');
 
     if (typeof CONTENT === 'undefined') {
       $('logText').textContent = "content.js not loaded";
+      $('screenBoot').remove();
       return;
     }
     $('sessionId').textContent = "session " + state.session;
@@ -1990,7 +2273,7 @@
     renderQueue();
     setTimeout(cycleLogLine, 1500);
     $('threadEmpty').remove();
-    startCase();
+    runBoot();
   }
 
   boot();
