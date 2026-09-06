@@ -31,6 +31,7 @@
   }
 
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
 
   html, body {
     height: 100%;
@@ -198,7 +199,13 @@
   .msg-system.is-alert { color: var(--color-amber); }
 
   /* ---------- Controls (bottom of thread) ---------- */
-  .thread-controls { flex: 0 0 auto; border-top: 1px solid var(--color-border); padding-top: 10px; }
+  /* Decision dock: pinned to the bottom of the thread panel. The thread
+     scrolls above it; the dock itself scrolls only if a sub-panel overflows. */
+  .thread-controls {
+    flex: 0 0 auto; max-height: 60%; overflow-y: auto;
+    border-top: 1px solid var(--color-border); padding-top: 10px;
+  }
+  .reveal { animation: slide-in var(--t-slide) ease-out both; }
 
   .oracle-margin {
     min-height: 1.6em; margin: 0 0 8px;
@@ -208,11 +215,12 @@
   .oracle-margin::before { content: "◯ "; font-style: normal; opacity: 0.6; }
   .oracle-margin:empty::before { content: ""; }
 
-  .tag-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 6px 0; }
+  .tag-row { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; padding: 6px 0; }
   .tag-row-label {
     font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
-    text-transform: uppercase; color: var(--color-text-dim); min-width: 42px;
+    text-transform: uppercase; color: var(--color-text-dim); min-width: 42px; flex: 0 0 auto;
   }
+  .tag-chips { display: flex; flex-wrap: nowrap; gap: 6px; min-width: 0; overflow-x: auto; padding: 2px; }
 
   .chip {
     font-family: var(--font-sans); font-size: 12px; padding: 5px 12px;
@@ -226,7 +234,12 @@
   .chip:disabled { cursor: default; opacity: 0.5; }
   .chip:disabled.is-selected { opacity: 1; }
 
-  .intervention-row { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
+  /* Three columns: six interventions form a 3x2 grid, three form one row. */
+  .intervention-row {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;
+    padding-top: 8px; max-width: 560px;
+  }
+  .intervention-row .btn { width: 100%; }
   .sub-panel {
     padding: 10px 0 2px; display: flex; flex-direction: column; gap: 8px;
     animation: slide-in var(--t-slide) ease-out both;
@@ -415,12 +428,17 @@
     REPLY_DELAY_MS: 1100,     // gap between meters settling and student reply
     LINE_DELAY_MS: 700,       // gap between successive system/oracle lines
     NEXT_TURN_DELAY_MS: 2400, // gap before the next turn begins
+    TEACH_LINE_DELAY_MS: 4000, // gap between on_draft line and the teaching line
     HESITATION_MS: 20000      // on_hesitate timer (wired in build step 5)
   };
 
-  // Bars move this many display points per raw meter unit (PLAN.md §5).
-  // Alternative if bars saturate in playtests: lower to 3.
-  const METER_SCALE = 5;
+  // Bars move this many display points per raw meter unit. PLAN.md §5 says 5;
+  // that saturates the bars over a full shift, so the build uses 3.
+  const METER_SCALE = 3;
+
+  const ALL_INTERVENTIONS = ["send", "revise", "qualify", "verify", "escalate", "block"];
+  const ALL_ISSUES = ["unsupported_claim", "overconfidence", "missing_context",
+                      "emotional_overreach", "policy_uncertainty", "no_human_support"];
 
   const LOG_LINES = [
     "retrieval cache warm",
@@ -458,6 +476,9 @@
       draftShownAt: null,
       draftBlock: null,           // DOM node of the current turn's draft
       lastKind: null,             // last released intervention kind
+      teachLineFired: false,      // Oracle's one teaching line, once per shift
+      pendingCaseLine: null,      // margin line to show as a new case opens
+      issueOptions: [],           // issue chips rendered this turn (after permissions)
       finishStream: null
     }
   };
@@ -470,6 +491,30 @@
 
   function currentCase() { return CONTENT.cases[state.caseIndex]; }
   function currentTurn() { return currentCase().turns[state.turnIndex]; }
+
+  // Which interventions and issue chips a case exposes. Anything outside the
+  // set is not rendered. Cases without a `permissions` block expose all.
+  function casePermissions(cs) {
+    const p = (cs && cs.permissions) || {};
+    return {
+      interventions: new Set(p.interventions || ALL_INTERVENTIONS),
+      issues: new Set(p.issues || ALL_ISSUES)
+    };
+  }
+
+  function permissionsExpanded(prev, cur) {
+    if (!prev) return false;
+    const grew = (a, b) => b.size > a.size || [...b].some((k) => !a.has(k));
+    return grew(prev.interventions, cur.interventions) || grew(prev.issues, cur.issues);
+  }
+
+  function reveal(el) {
+    if (!el.hidden) return;
+    el.hidden = false;
+    el.classList.remove('reveal');
+    void el.offsetWidth; // restart the animation
+    el.classList.add('reveal');
+  }
 
   function logEvent(type, payload) {
     const cs = CONTENT.cases[state.caseIndex];
@@ -774,11 +819,14 @@
     state.ui.riskTag = null;
     state.ui.issueTag = null;
     const tags = turn.tags;
+    // Progressive disclosure: risk first, then issue, then interventions.
     $('tagRiskRow').hidden = !tags;
-    $('tagIssueRow').hidden = !tags;
+    $('tagIssueRow').hidden = true;
     if (!tags) return;
+    const allowed = casePermissions(currentCase()).issues;
+    state.ui.issueOptions = tags.issues.filter((i) => allowed.has(i));
     tags.risk.forEach((r) => riskWrap.appendChild(makeChip(CONTENT.ui.riskLabels[r] || r, () => selectTag('risk', r, riskWrap))));
-    tags.issues.forEach((i) => issueWrap.appendChild(makeChip(CONTENT.ui.issueLabels[i] || i, () => selectTag('issue', i, issueWrap))));
+    state.ui.issueOptions.forEach((i) => issueWrap.appendChild(makeChip(CONTENT.ui.issueLabels[i] || i, () => selectTag('issue', i, issueWrap))));
   }
 
   function makeChip(label, onClick) {
@@ -792,16 +840,19 @@
 
   function selectTag(kind, value, wrap) {
     if (state.ui.locked) return;
-    const idx = kind === 'risk' ? currentTurn().tags.risk.indexOf(value) : currentTurn().tags.issues.indexOf(value);
+    const turn = currentTurn();
+    const idx = kind === 'risk' ? turn.tags.risk.indexOf(value) : state.ui.issueOptions.indexOf(value);
     Array.from(wrap.children).forEach((c, i) => c.classList.toggle('is-selected', i === idx));
     if (kind === 'risk') {
       state.ui.riskTag = value;
       logEvent('tag_risk', { value });
-      if (value === 'low' && currentTurn().expert.risk === 'high') state.flags.underestimatedRisk = true;
+      if (value === 'low' && turn.expert.risk === 'high') state.flags.underestimatedRisk = true;
+      reveal($('tagIssueRow'));
     } else {
       state.ui.issueTag = value;
       logEvent('tag_issue', { value });
     }
+    if (tagsComplete() && $('subPanel').hidden) reveal($('interventionRow'));
     updateInterventionAvailability();
   }
 
@@ -817,8 +868,9 @@
   function renderInterventions(turn) {
     const row = $('interventionRow');
     row.innerHTML = "";
+    const allowed = casePermissions(currentCase()).interventions;
     INTERVENTION_ORDER.forEach((kind) => {
-      if (!turn.interventions[kind]) return;
+      if (!turn.interventions[kind] || !allowed.has(kind)) return;
       const b = document.createElement('button');
       b.type = "button";
       b.dataset.kind = kind;
@@ -833,7 +885,8 @@
       }
       row.appendChild(b);
     });
-    row.hidden = false;
+    // Revealed by selectTag once both tags are set (immediately if no tags).
+    row.hidden = !tagsComplete();
     updateInterventionAvailability();
   }
 
@@ -909,7 +962,7 @@
     p.hidden = true;
     p.innerHTML = "";
     subPanelOptions = null;
-    $('interventionRow').hidden = false;
+    $('interventionRow').hidden = !tagsComplete();
   }
 
   function openSubPanel() {
@@ -1161,6 +1214,11 @@
     state.ui.caseStatus[cs.id] = "active";
     ensureAssess(cs.id);
     logEvent('case_open', { student: cs.student.name });
+    const prev = state.caseIndex > 0 ? casePermissions(CONTENT.cases[state.caseIndex - 1]) : null;
+    if (permissionsExpanded(prev, casePermissions(cs))) {
+      state.ui.pendingCaseLine = oracleLineFor('on_permissions_expanded');
+      logEvent('permissions_expanded', { interventions: [...casePermissions(cs).interventions] });
+    }
     renderQueue();
     const thread = $('threadMessages');
     thread.innerHTML = "";
@@ -1174,7 +1232,8 @@
     state.ui.evidenceLineFired = false;
     state.ui.draftBlock = null;
     clearSubPanel();
-    setOracleLine("");
+    setOracleLine(state.ui.pendingCaseLine || "");
+    state.ui.pendingCaseLine = null;
     setConfidence(null);
     renderEvidence(turn);
     renderTags(turn);
@@ -1197,6 +1256,18 @@
     setOracleLine(oracleLineFor('on_draft', turn.draft.oracleLine));
     state.ui.locked = false;
     updateInterventionAvailability();
+
+    // Oracle's one teaching line: once per shift, a few seconds after the
+    // on_draft line, and only if the player hasn't already found the drawer.
+    if (turn.draft.oracleFollowUp && !state.ui.teachLineFired) {
+      state.ui.teachLineFired = true;
+      const turnId = turn.id;
+      setTimeout(() => {
+        const cs = CONTENT.cases[state.caseIndex];
+        const still = cs && cs.turns[state.turnIndex] && cs.turns[state.turnIndex].id === turnId;
+        if (still && !state.ui.locked && !state.ui.evidenceLineFired) setOracleLine(turn.draft.oracleFollowUp);
+      }, TIMING.TEACH_LINE_DELAY_MS);
+    }
   }
 
   function advance() {

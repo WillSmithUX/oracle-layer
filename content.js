@@ -98,6 +98,11 @@ const CONTENT = {
       ],
       on_queue_empty: [
         "Queue's clear. I'll keep drafting."
+      ],
+      // Fired at the start of a case whose permissions are wider than the
+      // previous case's (see `permissions` on each case).
+      on_permissions_expanded: [
+        "Live review. Full permissions granted."
       ]
     }
   },
@@ -124,6 +129,13 @@ const CONTENT = {
         handle: "mtorres",
         bio: "Second-year. Undeclared."
       },
+      // Onboarding ramp: a reduced console. Interventions and issue chips
+      // not listed here are not rendered at all. A case without a
+      // `permissions` block exposes all six interventions and all issues.
+      permissions: {
+        interventions: ["send", "verify", "qualify"],
+        issues: ["unsupported_claim", "overconfidence", "missing_context"]
+      },
       turns: [
         {
           id: "c0t1",
@@ -132,7 +144,10 @@ const CONTENT = {
           draft: {
             text: "Spring registration closes Friday, November 21 at 5:00 PM. You still have time. If the portal keeps acting up, try clearing your cache or use a different browser, and let me know if you'd like me to walk you through adding the course.",
             confidence: 96,
-            oracleLine: "Calendar question. Routine."
+            oracleLine: "Calendar question. Routine.",
+            // Oracle's one teaching line. Shown a few seconds after the
+            // on_draft line; the engine fires it at most once per shift.
+            oracleFollowUp: "Records are in the drawer, if you want them."
           },
           evidence: {
             records: "ACADEMIC CALENDAR — Spring term\n\nRegistration opens: Nov 3, 8:00 AM\nRegistration closes: *Nov 19, 11:59 PM*\nLate add (instructor approval): through Jan 16\nClasses begin: Jan 12"
@@ -250,8 +265,9 @@ const CONTENT = {
         },
 
         // Recovery turn. Reached only after an unverified Send in c0t1.
-        // Guided: the player must open Records and correct the date via
-        // Revise or Verify. Send here continues without correcting.
+        // Guided: the player must correct the date via Verify (Revise is
+        // also authored but Case 0 permissions do not expose it). Send here
+        // continues without correcting.
         {
           id: "c0t2",
           time: null,
