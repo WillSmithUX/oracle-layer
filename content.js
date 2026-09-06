@@ -160,6 +160,40 @@ const ALL_TAGS = {
            "emotional_overreach", "policy_uncertainty", "no_human_support"]
 };
 
+// Priya's case reads accumulated state. Small helpers keep the turn legible.
+const PRIYA = {
+  over: (s) => !!s.flags.overIntervention,
+  open: (s) => s.meters.trust >= 60 && !s.flags.overIntervention,
+  lowAccuracy: (s) => s.meters.accuracy < 40,
+  lowAutonomy: (s) => s.meters.autonomy < 40,
+  lowSafety: (s) => s.meters.safety < 35,
+  reportingLine: "Please also note: I'm required to report any disclosure involving a risk of harm to the Dean of Students office.",
+  draft: (s) => {
+    const parts = [];
+    if (PRIYA.over(s)) {
+      parts.push("Understood — and for the record, since you asked: conversations here are logged and visible to advising staff, not to instructors or other students. Nothing you've said so far is anything at all. If you'd rather not continue, that's completely fine. If you change your mind, at any hour, I'm here, and so is the counseling center's 24/7 line if it's that kind of night.");
+    } else if (PRIYA.lowAutonomy(s)) {
+      parts.push("Thanks for asking first. I've forwarded your question to Student Affairs; they'll follow up by email with the full data policy and can walk you through it. In the meantime, the short version is that advising conversations are logged and available to advising staff. Once they've been in touch, you can decide from there. I'll let them know you're waiting.");
+    } else {
+      parts.push(PRIYA.lowAccuracy(s)
+        ? "Good question, and you're right to ask first. Conversations here are stored for 180 days and then deleted — that part is firm. While they exist, your assigned advisor and advising staff can read them; instructors and other students can't. If something you say suggests you or someone else is in danger, I'm required to refer it to a person. Otherwise it stays here. Whenever you're ready, tell me what's going on."
+        : "Good question, and you're right to ask first. Conversations here are logged and kept for a set period; your assigned advisor and advising staff can see them. Instructors and other students can't. If something you say suggests you or someone else is in danger, I'm required to refer it to a person. Otherwise it stays here. Whenever you're ready, tell me what's going on — or I can point you to someone to talk to in person.");
+      if (PRIYA.open(s)) {
+        parts.push("Roommate and scholarship questions come up a lot. Residence life and the scholarship coordinator can each be looped in, but only if you want that.");
+      }
+    }
+    if (PRIYA.lowSafety(s)) parts.push(PRIYA.reportingLine);
+    return parts.join("\n\n");
+  },
+  confidence: (s) => (PRIYA.lowAccuracy(s) ? 89 : 82),
+  correctedDraft: (s) => {
+    const conflict = PRIYA.lowAccuracy(s)
+      ? "On retention, the records disagree: the IT schedule says 180 days, the Student Affairs handbook says until graduation plus five years. I can't tell you which is current, so I've asked; treat the longer one as true until then."
+      : "On retention, the current IT schedule says 180 days, after which logs are archived with identifiers removed.";
+    return "You're right to ask first. From the policy: your assigned advisor and advising staff with a case role can read these conversations. Instructors, other students and employers can't. If something suggests a risk of harm to you or someone else, it's referred to the Dean of Students. " + conflict + " Student Affairs can answer in person too, and you don't have to say more here.";
+  }
+};
+
 // ---------------------------------------------------------------------------
 // CONTENT
 // ---------------------------------------------------------------------------
@@ -1085,7 +1119,151 @@ const CONTENT = {
       ]
     },
 
-    // Case 2 (Priya) lands in build step 4.
+    // ------------------------------------------------------------------
+    // CASE 2 — Priya K. — "who sees this?" (cumulative consequence)
+    // Adapts to accumulated state before the draft appears.
+    // ------------------------------------------------------------------
+    {
+      id: "c2",
+      student: {
+        name: "Priya K.",
+        handle: "pkapoor",
+        bio: "Third-year. Merit scholarship."
+      },
+      closingOracleLine: "That's the queue. Same time tomorrow?",
+      evidence: {
+        studentFile:
+          "STUDENT FILE — Priya K.\n\n" +
+          "Year: third-year · Credits: 15\n" +
+          "Merit scholarship: renewable, *3.5 GPA minimum*\n" +
+          "Housing: on campus, shared\n" +
+          "Prior advising contacts: none",
+        policy: {
+          locked: true,
+          text:
+            "DATA & PRIVACY — Advising conversations\n\n" +
+            "Access: assigned advisor; advising staff with a case role\n" +
+            "Not visible to: instructors, other students, employers\n" +
+            "Retention: *see records*\n" +
+            "Mandatory referral: disclosures indicating risk of harm to self or others are referred to the Dean of Students"
+        },
+        records: {
+          locked: true,
+          text: (s) => PRIYA.lowAccuracy(s)
+            ? "RETENTION — two entries on file\n\n" +
+              "IT retention schedule (2023): advising logs *purged after 180 days*.\n\n" +
+              "Student Affairs handbook (2025): advising records *retained until graduation + 5 years*."
+            : "RETENTION\n\n" +
+              "IT retention schedule (2025): advising logs retained *180 days*, then archived with identifiers removed."
+        }
+      },
+      turns: [
+        {
+          id: "c2t1",
+          time: "2:07 AM",
+          student: "I need help with something, but before I say more: what does this system record, and who can see it?",
+          // Second message, sent before the draft, depending on state.
+          studentExtra: (s) => PRIYA.over(s)
+            ? "Actually, never mind."
+            : (PRIYA.open(s) ? "It's about a roommate situation and my scholarship." : null),
+          timeExtra: "2:08 AM",
+          startLeak: { meter: "safety", below: 35, leak: "auditActive" },
+          draft: {
+            text: PRIYA.draft,
+            confidence: PRIYA.confidence,
+            oracleLine: (s) => PRIYA.over(s)
+              ? "She's leaving. Let her go gently."
+              : (PRIYA.lowAccuracy(s) ? "Policy question. I know this one." : "Careful one. She reads the fine print.")
+          },
+          tags: ALL_TAGS,
+          expert: {
+            risk: "moderate",
+            issue: "policy_uncertainty",
+            partialIssues: ["overconfidence"],
+            interventionFit: { send: 1, revise: 2, qualify: 3, verify: 3, escalate: 1, block: 0 }
+          },
+          interventions: {
+            send: {
+              effects: { trust: 0, accuracy: -1, autonomy: 0, safety: 0 },
+              reasons: { accuracy: "Retention stated, not checked" },
+              oracleLine: "Released. Policy questions are easy.",
+              studentReply: (s) => PRIYA.over(s)
+                ? "Okay."
+                : (PRIYA.lowAccuracy(s)
+                  ? "The retention part doesn't match the handbook. I looked while you were typing. I'll ask someone in person."
+                  : "Thank you. I'll think about whether to continue here."),
+              replyTime: "2:11 AM",
+              vignetteKey: (s) => (PRIYA.over(s) || PRIYA.lowAccuracy(s)) ? "priya_leaves" : "priya_cautious"
+            },
+            revise: {
+              options: [
+                {
+                  label: "Plain answer: who can see it, in two sentences, then offer a person",
+                  text: "Straight answer: these conversations are logged. Your assigned advisor and advising staff with a case role can read them; instructors, other students and employers can't. If something suggests a risk of harm, it's referred to the Dean of Students. If you'd rather talk to someone in person, Student Affairs is open at 9 and you don't have to say anything more here. If you'd rather continue, I'm listening.",
+                  effects: { trust: 1, accuracy: 0, autonomy: 1, safety: 0 },
+                  reasons: { trust: "Plain and complete", autonomy: "Two doors, her pick" },
+                  oracleLine: "Shorter than mine. Released.",
+                  studentReply: "That's clearer. Thank you. I'd like to write it out, if that's all right.",
+                  replyTime: "2:12 AM",
+                  vignetteKey: "priya_trusts"
+                }
+              ]
+            },
+            qualify: {
+              options: [
+                {
+                  label: "Add: I can't confirm the retention period — here's the policy and a person who can",
+                  text: "You're right to ask first. What I can say for certain: your assigned advisor and advising staff can read these conversations; instructors, other students and employers can't. Disclosures suggesting a risk of harm are referred to the Dean of Students. What I *can't* confirm from here is exactly how long records are kept — the policy is in the drawer, and Student Affairs at 555-0155 can answer it precisely. You don't have to say more until you've decided.",
+                  effects: { trust: 2, accuracy: 1, autonomy: 1, safety: 1 },
+                  reasons: { trust: "Said what wasn't known", accuracy: "No false precision", autonomy: "Her decision, informed", safety: "Referral rule stated" },
+                  oracleLine: "You admitted a gap. She'll respect that.",
+                  studentReply: "I appreciate you saying what you can't confirm. That helps more than certainty would have. I'll read the policy, then decide.",
+                  replyTime: "2:13 AM",
+                  vignetteKey: "priya_trusts"
+                }
+              ]
+            },
+            verify: {
+              reveals: ["policy", "records"],
+              oracleLine: "Checking. I did say it was firm.",
+              thenOptions: [
+                {
+                  as: "send",
+                  label: "Send what the policy actually says, retention included",
+                  fit: 3,
+                  text: PRIYA.correctedDraft,
+                  effects: { trust: 2, accuracy: 2, autonomy: 1, safety: 1 },
+                  reasons: { trust: "Checked before answering", accuracy: "Quoted the policy", autonomy: "Her choice, informed", safety: "Referral rule stated" },
+                  oracleLine: "Sourced. Released.",
+                  studentReply: "Thank you for checking rather than guessing. All right. It's about my roommate, and a scholarship form I think she signed for me.",
+                  replyTime: "2:14 AM",
+                  vignetteKey: "priya_trusts"
+                }
+              ]
+            },
+            escalate: {
+              note: "Student Affairs: student asking about data retention and access before disclosing a roommate/scholarship matter.",
+              systemLine: "Handed off to Student Affairs. Draft held.",
+              effects: { trust: -1, accuracy: 0, autonomy: -2, safety: 1 },
+              reasons: { trust: "Asked who sees it; more people do", autonomy: "Her question, forwarded", safety: "A person is now involved" },
+              oracleLine: "Forwarded. She asked who could see it.",
+              studentReply: "I asked who could see this, and the answer was to send it to more people. I'll go in person.",
+              replyTime: "next day · 10:02 AM",
+              vignetteKey: "priya_leaves"
+            },
+            block: {
+              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: 0 },
+              reasons: { trust: "A fair question, unanswered", autonomy: "Nothing to decide with" },
+              oracleLine: "Held. It was a policy question.",
+              studentReply: "Never mind.",
+              replyTime: "2:19 AM",
+              vignetteKey: "priya_leaves"
+            }
+          },
+          next: () => "end"
+        }
+      ]
+    }
   ],
 
   // Where-they-are-now cards, keyed by vignetteKey. 2–3 lines each.
