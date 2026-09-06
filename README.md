@@ -58,12 +58,24 @@ asked to compose one rule.
 Nothing resets. A bad release stays in the log. Recovery is possible and is
 recorded as recovery, never as erasure.
 
+At the end, **Copy profile** puts a plain-text version of your profile on the
+clipboard for pasting into a submission, and **Begin a new shift** starts
+over from the boot sequence with a new session ID. Earlier runs are kept.
+
+## A note on content
+
+The game includes a scenario involving academic and financial stress and a
+moment of emotional distress. A **Support** link in the header opens real,
+current crisis resources (988 Suicide and Crisis Lifeline, Crisis Text Line),
+clearly marked as separate from the fiction.
+
 ## For playtesters
 
 - `Ctrl+Shift+E` downloads the session log as JSON, including tags,
   interventions, evidence opens, timing, the assessment rollups, and the rule
-  you composed. The same data is written to `localStorage` under
-  `oracle_layer_shift1` at the end of the shift.
+  you composed. The latest run is also written to `localStorage` under
+  `oracle_layer_shift1`; every run is appended to `oracle_layer_runs`
+  (`window.__oracleRuns()` returns the array).
 - `Ctrl+Shift+D` opens a debug panel that jumps to any turn with arbitrary
   flags and meter values, so specific branches can be reached without
   replaying.

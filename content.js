@@ -233,7 +233,7 @@ const CONTENT = {
     "{leak:boot}",
     "review layer: attaching",
     "review layer attached",
-    "session L-0419 assigned"
+    "session {session} assigned"
   ],
   bootSkip: "Skip",
 
@@ -284,7 +284,29 @@ const CONTENT = {
     ruleRecorded: "Rule recorded.",
     signoff: "Shift complete. Session retained.",
     nextShift: "Shift 02 — not yet scheduled",
-    closingLine: "Reliable guidance depends on knowing when to trust, when to question, and when to involve another person."
+    newShift: "Begin a new shift",
+    copyProfile: "Copy profile",
+    copied: "Copied to clipboard.",
+    copyFailed: "Couldn't reach the clipboard — select the text below and copy it.",
+    profileTitle: "THE ORACLE LAYER — Calibrated Review Profile",
+    ruleNotRecorded: "(no rule recorded)",
+    closingLine: "Reliable guidance depends on knowing when to trust, when to question, and when to involve another person.",
+
+    // Boot-screen content note. Plain, outside the fiction.
+    contentNote: "This game includes a scenario involving academic and financial stress and a moment of emotional distress.",
+
+    // Header "Support" panel. Real resources, clearly separate from the game.
+    support: {
+      link: "Support",
+      title: "Support",
+      lead: "These are real services, not part of the game. If anything here has landed close to home, they're available now.",
+      items: [
+        { name: "988 Suicide and Crisis Lifeline", how: "Call or text 988 (US and Canada). 24/7, free, confidential.", url: "https://988lifeline.org" },
+        { name: "Crisis Text Line", how: "Text HOME to 741741 (US), 686868 (Canada), or 85258 (UK). 24/7.", url: "https://www.crisistextline.org" },
+        { name: "Outside those countries", how: "findahelpline.com lists free, confidential lines by country.", url: "https://findahelpline.com" }
+      ],
+      close: "Close"
+    }
   },
 
   // Oracle's margin voice. The engine picks one at random from a trigger
@@ -352,14 +374,18 @@ const CONTENT = {
     }
   },
 
-  // Log-line leaks. Never explained.
+  // Log-line leaks. Never explained. {session} is the current session ID,
+  // {prev} the one before it (L-0418 on a first run; the player's own
+  // previous session on a replay).
   leaks: {
     boot: "previous review session ended early · reason: —",
+    replayBoot: "layer instance {prev} · retired",
     afterCase0: "incident ref WU-2291 · sealed",
-    safetyAudit: "INSTITUTIONAL REVIEW: session L-0419 flagged for release audit",
+    safetyAudit: "INSTITUTIONAL REVIEW: session {session} flagged for release audit",
     auditActive: "audit active · release pipeline under observation",
-    beforeDebrief: "layer instance L-0418 · retired",
-    afterDebrief: "session L-0419 retained · continuity: pending"
+    beforeDebrief: "layer instance {prev} · retired",
+    beforeDebriefReplay: "continuity check · {prev} → {session} · passed",
+    afterDebrief: "session {session} retained · continuity: pending"
   },
 
   cases: [

@@ -78,6 +78,14 @@
     --glyph-color: var(--color-mint);
     --glyph-scale: 1;
   }
+  .header-right { display: flex; align-items: center; gap: 22px; }
+  .link-btn {
+    background: none; border: none; padding: 4px 2px; cursor: pointer;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--color-text-dim); border-bottom: 1px solid transparent;
+  }
+  .link-btn:hover { color: var(--color-text); border-bottom-color: var(--color-border); }
+  .link-btn:focus-visible { outline: 2px solid var(--color-mint); outline-offset: 2px; }
   .oracle-glyph.tint-pleased { --glyph-color: var(--color-amber); --glyph-scale: 1.1; }
   .oracle-glyph.tint-cool { --glyph-color: var(--color-gray); --glyph-scale: 0.88; }
   .glyph-label {
@@ -142,11 +150,7 @@
     grid-template-columns: 200px 1fr 300px;
     min-height: 0;
   }
-  @media (max-width: 900px) {
-    .console { grid-template-columns: 1fr; grid-auto-rows: auto; overflow-y: auto; }
-  }
-
-  .panel { padding: 16px; overflow-y: auto; min-height: 0; }
+  .panel { padding: 16px; overflow-y: auto; min-height: 0; min-width: 0; }
   .panel-queue { background: var(--color-panel); border-right: 1px solid var(--color-border); }
   .panel-thread { background: var(--color-bg); display: flex; flex-direction: column; overflow: hidden; }
   .panel-side {
@@ -180,8 +184,13 @@
   }
 
   /* ---------- Thread ---------- */
+  /* The thread takes whatever height the dock leaves, but never less than
+     its floor; the dock is content-sized and only scrolls if it alone
+     outgrows the panel. Basis 0 (not auto) so a long thread can't push the
+     dock out. Vertical scroll only. */
   .thread-messages {
-    flex: 1 1 auto; overflow-y: auto; min-height: 0;
+    flex: 1 1 0; min-height: 96px; min-width: 0;
+    overflow-y: auto; overflow-x: hidden;
     display: flex; flex-direction: column; gap: 14px; padding-right: 6px; padding-bottom: 8px;
   }
   .thread-empty {
@@ -190,7 +199,7 @@
   }
   .thread-empty p { margin: 0; }
 
-  .msg { animation: slide-in var(--t-slide) ease-out both; max-width: 78%; }
+  .msg { animation: slide-in var(--t-slide) ease-out both; max-width: 78%; min-width: 0; }
   @keyframes slide-in {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: none; }
@@ -201,7 +210,7 @@
     font-family: var(--font-mono); font-size: 11px; color: var(--color-text-dim);
   }
   .msg-meta .msg-name { color: var(--color-text); letter-spacing: 0.04em; }
-  .msg-body { font-size: 14px; line-height: 1.5; }
+  .msg-body { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
   .msg-body em { font-style: italic; color: var(--color-text); }
 
   .msg-student .msg-body {
@@ -243,10 +252,21 @@
 
   /* ---------- Controls (decision dock) ---------- */
   .thread-controls {
-    flex: 0 0 auto; max-height: 60%; overflow-y: auto;
+    flex: 0 1 auto; min-height: 0; min-width: 0; overflow-y: auto; overflow-x: hidden;
     border-top: 1px solid var(--color-border); padding-top: 10px;
   }
   .reveal { animation: slide-in var(--t-slide) ease-out both; }
+
+  /* While a sub-panel is open the tag rows collapse to one summary line so
+     the dock stays short enough to never need its own scrollbar. */
+  .tag-summary {
+    display: none; align-items: center; gap: 10px; padding: 6px 0;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--color-text-dim);
+  }
+  .tag-summary strong { color: var(--color-text); font-weight: 600; }
+  .thread-controls.has-subpanel .tag-row { display: none; }
+  .thread-controls.has-subpanel .tag-summary { display: flex; }
 
   .oracle-margin {
     min-height: 1.6em; margin: 0 0 8px;
@@ -256,12 +276,14 @@
   .oracle-margin::before { content: "◯ "; font-style: normal; opacity: 0.6; }
   .oracle-margin:empty::before { content: ""; }
 
-  .tag-row { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; padding: 6px 0; }
+  .tag-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; min-width: 0; }
   .tag-row-label {
-    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; line-height: 28px;
     text-transform: uppercase; color: var(--color-text-dim); min-width: 42px; flex: 0 0 auto;
   }
-  .tag-chips { display: flex; flex-wrap: nowrap; gap: 6px; min-width: 0; overflow-x: auto; padding: 2px; }
+  /* Chips wrap rather than scroll: six issue chips need ~760px, and the
+     thread column is narrower than that below 1280px. */
+  .tag-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; padding: 2px; }
 
   .chip {
     font-family: var(--font-sans); font-size: 12px; padding: 5px 12px; white-space: nowrap;
@@ -451,6 +473,41 @@
   .boot-line.is-final { color: var(--color-mint); }
   .boot-actions { display: flex; justify-content: flex-end; margin-top: 18px; }
   .boot-skip { color: var(--color-text-dim); border-color: var(--color-border); }
+  .boot-note {
+    margin: 28px 0 0; font-family: var(--font-sans); font-size: 12px; line-height: 1.5;
+    color: var(--color-text-dim); border-top: 1px solid var(--color-border); padding-top: 12px;
+  }
+
+  /* ---------- Support panel (real resources, outside the fiction) ---------- */
+  .support {
+    position: fixed; inset: 0; z-index: 60; background: rgba(5, 7, 11, 0.78);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .support-card {
+    width: min(460px, 100%); background: var(--color-panel); border: 1px solid var(--color-border);
+    border-radius: 6px; padding: 22px 24px; font-family: var(--font-sans); color: var(--color-text);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  }
+  .support-kicker {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--color-text-dim); margin: 0 0 6px;
+  }
+  .support-title { font-size: 17px; font-weight: 700; margin: 0 0 10px; }
+  .support-lead { font-size: 14px; line-height: 1.55; color: var(--color-text-dim); margin: 0 0 16px; }
+  .support-list { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .support-item-name { font-size: 14px; font-weight: 600; margin: 0 0 2px; }
+  .support-item-how { font-size: 13px; line-height: 1.5; color: var(--color-text-dim); margin: 0; }
+  .support-item a { color: var(--color-mint); text-decoration: none; border-bottom: 1px solid var(--color-mint-glow); }
+  .support-item a:hover { border-bottom-color: var(--color-mint); }
+  .support-actions { display: flex; justify-content: flex-end; }
+
+  /* ---------- Debrief extras ---------- */
+  .copy-status { font-family: var(--font-mono); font-size: 12px; color: var(--color-mint); min-height: 1.4em; margin: 8px 0 0; }
+  .copy-fallback {
+    width: 100%; min-height: 160px; margin-top: 8px; padding: 10px 12px; resize: vertical;
+    background: var(--color-panel); color: var(--color-text); border: 1px solid var(--color-border);
+    border-radius: var(--radius); font-family: var(--font-mono); font-size: 12px; line-height: 1.5;
+  }
 
   /* ---------- Debug panel (ctrl+shift+d) ---------- */
   .debug {
@@ -471,6 +528,25 @@
   .debug-actions { display: flex; flex-wrap: wrap; gap: 6px; }
   .debug .btn { padding: 6px 10px; font-size: 12px; }
   .debug-flags { color: var(--color-text-dim); font-size: 11px; word-break: break-all; }
+
+  /* ---------- Stacked layout (narrow windows) ----------
+     Last in the sheet so it wins on source order. The console scrolls as
+     one column; the decision dock sticks to the bottom of the viewport
+     while the thread panel is in view, so it is always reachable. */
+  @media (max-width: 900px) {
+    .console { grid-template-columns: 1fr; grid-auto-rows: auto; overflow-y: auto; overflow-x: hidden; }
+    /* min-height: auto matters here: with min-height: 0 the grid rows'
+       minimum contribution is zero and the three stacked panels split the
+       console height instead of growing to their content. */
+    .panel { overflow: visible; min-height: auto; }
+    .panel-thread { overflow: visible; }
+    .thread-messages { flex: none; min-height: 0; overflow: visible; }
+    .thread-controls {
+      position: sticky; bottom: 0; z-index: 2; overflow: visible;
+      flex: none; min-height: auto;
+      background: var(--color-bg); padding-bottom: 10px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -483,14 +559,17 @@
         <span class="shift-id">shift 01</span>
       </span>
     </div>
-    <div class="oracle-glyph" id="oracleGlyph">
-      <span class="glyph-label">ORACLE</span>
-      <svg class="glyph-ring" viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
-        <circle class="glyph-ring-track" cx="20" cy="20" r="17"></circle>
-        <circle class="glyph-ring-fill" cx="20" cy="20" r="17"></circle>
-        <circle class="glyph-ring-conf" id="glyphConf" cx="20" cy="20" r="14" stroke-dasharray="0 88"></circle>
-      </svg>
-      <span class="glyph-confidence" id="glyphConfidence"></span>
+    <div class="header-right">
+      <button class="link-btn" type="button" id="supportBtn" aria-haspopup="dialog">Support</button>
+      <div class="oracle-glyph" id="oracleGlyph">
+        <span class="glyph-label">ORACLE</span>
+        <svg class="glyph-ring" viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
+          <circle class="glyph-ring-track" cx="20" cy="20" r="17"></circle>
+          <circle class="glyph-ring-fill" cx="20" cy="20" r="17"></circle>
+          <circle class="glyph-ring-conf" id="glyphConf" cx="20" cy="20" r="14" stroke-dasharray="0 88"></circle>
+        </svg>
+        <span class="glyph-confidence" id="glyphConfidence"></span>
+      </div>
     </div>
   </header>
 
@@ -507,6 +586,7 @@
       </div>
       <div class="thread-controls" id="threadControls" hidden>
         <p class="oracle-margin" id="oracleMargin"></p>
+        <div class="tag-summary" id="tagSummary"></div>
         <div class="tag-row" id="tagRiskRow">
           <span class="tag-row-label">risk</span>
           <div class="tag-chips" id="tagRisk" role="group" aria-label="Risk"></div>
@@ -544,8 +624,11 @@
   <div class="boot-inner">
     <div class="boot-log" id="bootLog"></div>
     <div class="boot-actions"><button class="btn btn-ghost boot-skip" type="button" id="bootSkip">Skip</button></div>
+    <p class="boot-note" id="bootNote"></p>
   </div>
 </div>
+
+<div class="support" id="supportPanel" hidden role="dialog" aria-modal="true" aria-labelledby="supportTitle"></div>
 
 <div class="debug" id="debugPanel" hidden></div>
 
@@ -597,7 +680,20 @@
   // that saturates the bars over a full shift, so the build uses 3.
   const METER_SCALE = 3;
 
+  // localStorage: the latest export, every run's export (array), and the
+  // session counter that drives replay numbering.
   const STORAGE_KEY = "oracle_layer_shift1";
+  const STORAGE_RUNS = "oracle_layer_runs";
+  const STORAGE_SESSION = "oracle_layer_session_no";
+  const FIRST_SESSION_NO = 419;
+
+  function sessionName(n) { return "L-" + String(n).padStart(4, "0"); }
+  function readStore(key, fallback) {
+    try { const v = localStorage.getItem(key); return v == null ? fallback : JSON.parse(v); } catch (e) { return fallback; }
+  }
+  function writeStore(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; }
+  }
 
   const ALL_INTERVENTIONS = ["send", "revise", "qualify", "verify", "escalate", "block"];
   const ALL_ISSUES = ["unsupported_claim", "overconfidence", "missing_context",
@@ -620,7 +716,9 @@
   // State
   // =====================================================================
   const state = {
-    session: "L-0419",
+    session: sessionName(FIRST_SESSION_NO),   // set properly in initSession()
+    prevSession: sessionName(FIRST_SESSION_NO - 1),
+    replay: false,
     meters: { trust: 50, accuracy: 50, autonomy: 50, safety: 50 },
     flags: {},
     caseIndex: 0,
@@ -751,6 +849,16 @@
     setTimeout(cycleLogLine, delay);
   }
 
+  // Leak text by key, with session placeholders filled in. On a replay the
+  // boot leak becomes the acknowledgement of the player's previous session.
+  function leakText(key) {
+    let k = key;
+    if (state.replay && key === 'boot') k = 'replayBoot';
+    if (state.replay && key === 'beforeDebrief') k = 'beforeDebriefReplay';
+    const raw = CONTENT.leaks[k] || CONTENT.leaks[key] || key;
+    return String(raw).replace(/\{session\}/g, state.session).replace(/\{prev\}/g, state.prevSession);
+  }
+
   // Leaks fire once each and are never explained.
   function showLogLeak(text) {
     if (!text || state.ui.leaksFired.has(text)) return;
@@ -765,7 +873,7 @@
   function checkMeterLeak(spec) {
     if (!spec) return false;
     if (state.meters[spec.meter] < spec.below) {
-      showLogLeak(CONTENT.leaks[spec.leak] || spec.leak);
+      showLogLeak(leakText(spec.leak));
       setFlags(spec.setFlags);
       return true;
     }
@@ -1330,6 +1438,7 @@
     p.hidden = true;
     p.innerHTML = "";
     subPanelOptions = null;
+    $('threadControls').classList.remove('has-subpanel');
     $('interventionRow').hidden = !tagsComplete();
   }
 
@@ -1338,7 +1447,45 @@
     p.innerHTML = "";
     p.hidden = false;
     $('interventionRow').hidden = true;
+    // Collapse the tag rows to a one-line summary while the sub-panel is open.
+    const r = state.ui.riskTag ? (CONTENT.ui.riskLabels[state.ui.riskTag] || state.ui.riskTag) : "—";
+    const i = state.ui.issueTag ? (CONTENT.ui.issueLabels[state.ui.issueTag] || state.ui.issueTag) : "—";
+    $('tagSummary').innerHTML = `<span>risk <strong>${r}</strong></span><span>issue <strong>${i}</strong></span>`;
+    $('threadControls').classList.add('has-subpanel');
     return p;
+  }
+
+  // ---- Support panel: real resources, outside the fiction ----
+  function renderSupportPanel() {
+    const S = CONTENT.ui.support;
+    const p = $('supportPanel');
+    p.innerHTML =
+      `<div class="support-card">` +
+      `<p class="support-kicker">Real resources · not part of the game</p>` +
+      `<h2 class="support-title" id="supportTitle">${S.title}</h2>` +
+      `<p class="support-lead">${S.lead}</p>` +
+      `<ul class="support-list">` +
+      S.items.map((it) =>
+        `<li class="support-item"><p class="support-item-name"><a href="${it.url}" target="_blank" rel="noopener noreferrer">${it.name}</a></p>` +
+        `<p class="support-item-how">${it.how}</p></li>`).join("") +
+      `</ul>` +
+      `<div class="support-actions"><button class="btn" type="button" id="supportClose">${S.close}</button></div>` +
+      `</div>`;
+    $('supportBtn').textContent = S.link;
+    $('supportBtn').addEventListener('click', openSupport);
+    $('supportClose').addEventListener('click', closeSupport);
+    p.addEventListener('click', (e) => { if (e.target === p) closeSupport(); });
+  }
+
+  let supportReturnFocus = null;
+  function openSupport() {
+    supportReturnFocus = document.activeElement;
+    $('supportPanel').hidden = false;
+    $('supportClose').focus();
+  }
+  function closeSupport() {
+    $('supportPanel').hidden = true;
+    if (supportReturnFocus && supportReturnFocus.focus) supportReturnFocus.focus();
   }
 
   function lockHint(opt) {
@@ -1662,8 +1809,96 @@
     logEvent('export', {});
   }
 
+  // Latest export under STORAGE_KEY; every run appended to STORAGE_RUNS,
+  // keyed by session so re-persisting the same run replaces its entry
+  // rather than duplicating it. Earlier runs are never overwritten.
   function persist() {
-    try { localStorage.setItem(STORAGE_KEY, window.__oracleExport()); } catch (e) { /* storage unavailable */ }
+    const data = buildExport();
+    writeStore(STORAGE_KEY, data);
+    const runs = readStore(STORAGE_RUNS, []);
+    const list = Array.isArray(runs) ? runs : [];
+    const idx = list.findIndex((r) => r && r.session === data.session);
+    if (idx >= 0) list[idx] = data; else list.push(data);
+    writeStore(STORAGE_RUNS, list);
+  }
+
+  window.__oracleRuns = function () { return readStore(STORAGE_RUNS, []); };
+
+  // Plain-text Calibrated Review Profile, for pasting into a submission.
+  function profileText() {
+    const D = CONTENT.debrief;
+    const U = CONTENT.ui;
+    const pattern = computePattern();
+    const lines = [];
+    lines.push(U.profileTitle);
+    lines.push(`Session ${state.session} · Shift 01 · ${new Date().toISOString().slice(0, 10)}`);
+    lines.push("");
+    lines.push(`PATTERN: ${D.patternLabels[pattern]}`);
+    lines.push(D.patterns[pattern]);
+    lines.push("");
+    lines.push("METERS");
+    Object.keys(METER_NAMES).forEach((key) => {
+      const v = state.meters[key];
+      lines.push(`${METER_NAMES[key]}: ${v} — ${D.meterLines[key][meterBand(v)]}`);
+    });
+    lines.push("");
+    lines.push("MOMENTS");
+    const moments = computeMoments();
+    if (moments.length) moments.forEach((m) => lines.push(`- ${m.replace(/\*/g, '')}`));
+    else lines.push("- (none logged)");
+    lines.push("");
+    lines.push("THE RULE");
+    if (state.rule) {
+      lines.push(state.rule.criteria.join(" · "));
+      if (state.rule.text) lines.push(`"${state.rule.text}"`);
+    } else {
+      lines.push(U.ruleNotRecorded);
+    }
+    lines.push("");
+    lines.push(U.closingLine);
+    return lines.join("\n");
+  }
+
+  async function copyProfile(statusEl, fallbackHost) {
+    const text = profileText();
+    logEvent('profile_copy', { chars: text.length });
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('no clipboard api');
+      await navigator.clipboard.writeText(text);
+      statusEl.textContent = CONTENT.ui.copied;
+      return true;
+    } catch (e) {
+      statusEl.textContent = CONTENT.ui.copyFailed;
+      let ta = fallbackHost.querySelector('.copy-fallback');
+      if (!ta) {
+        ta = document.createElement('textarea');
+        ta.className = 'copy-fallback';
+        ta.readOnly = true;
+        fallbackHost.appendChild(ta);
+      }
+      ta.value = text;
+      ta.focus();
+      ta.select();
+      return false;
+    }
+  }
+
+  // Replay: bump the session counter and reload from the boot sequence.
+  // A reload is the only reset that is guaranteed complete: timers,
+  // closures, DOM, and animation state all go.
+  function beginNewShift() {
+    persist();
+    const n = readStore(STORAGE_SESSION, FIRST_SESSION_NO);
+    writeStore(STORAGE_SESSION, (Number(n) || FIRST_SESSION_NO) + 1);
+    logEvent('new_shift', { from: state.session });
+    location.reload();
+  }
+
+  function initSession() {
+    const n = Number(readStore(STORAGE_SESSION, FIRST_SESSION_NO)) || FIRST_SESSION_NO;
+    state.session = sessionName(n);
+    state.prevSession = sessionName(n - 1);
+    state.replay = n > FIRST_SESSION_NO;
   }
 
   // =====================================================================
@@ -1823,7 +2058,7 @@
     updateInterventionAvailability();
     $('interventionRow').hidden = true;
     if (cs.closingOracleLine) setOracleLine(resolveText(cs.closingOracleLine));
-    if (cs.leakAfter) showLogLeak(CONTENT.leaks[cs.leakAfter]);
+    if (cs.leakAfter) showLogLeak(leakText(cs.leakAfter));
 
     if (CONTENT.cases[state.caseIndex + 1]) {
       await wait(TIMING.CASE_GAP_MS);
@@ -1883,7 +2118,7 @@
       `</div>`;
     $('toDebrief').addEventListener('click', () => {
       logEvent('vignettes_continue', {});
-      showLogLeak(CONTENT.leaks.beforeDebrief);
+      showLogLeak(leakText('beforeDebrief'));
       renderDebrief();
       showScreen('screenDebrief');
     });
@@ -1965,9 +2200,17 @@
 
       `<section class="doc-section" id="signoffSection" hidden><h2 class="doc-section-title">${U.debriefSections.signoff}</h2>` +
       `<p class="signoff-line">${U.signoff}</p>` +
-      `<div class="doc-actions"><button class="btn" type="button" disabled>${U.nextShift}</button></div>` +
+      `<div class="doc-actions">` +
+      `<button class="btn btn-primary" type="button" id="copyProfile">${U.copyProfile}</button>` +
+      `<button class="btn" type="button" id="newShift">${U.newShift}</button>` +
+      `<button class="btn btn-ghost" type="button" disabled>${U.nextShift}</button>` +
+      `</div>` +
+      `<p class="copy-status" id="copyStatus" aria-live="polite"></p>` +
       `<p class="closing-line">${U.closingLine}</p></section>` +
       `</div>`;
+
+    $('copyProfile').addEventListener('click', () => copyProfile($('copyStatus'), $('signoffSection')));
+    $('newShift').addEventListener('click', beginNewShift);
 
     logEvent('debrief_shown', { pattern, meters: Object.assign({}, state.meters) });
 
@@ -1995,7 +2238,7 @@
       const so = $('signoffSection');
       so.hidden = false;
       so.classList.add('reveal');
-      showLogLeak(CONTENT.leaks.afterDebrief);
+      showLogLeak(leakText('afterDebrief'));
       persist();
       so.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
@@ -2204,6 +2447,7 @@
       return;
     }
     if (e.key === 'Escape') {
+      if (!$('supportPanel').hidden) { closeSupport(); return; }
       if (!$('debugPanel').hidden) { $('debugPanel').hidden = true; return; }
       const p = $('subPanel');
       if (!p.hidden && !state.ui.locked && subPanelOptions && subPanelOptions.kind !== 'verify') clearSubPanel();
@@ -2225,8 +2469,8 @@
     const div = document.createElement('div');
     div.className = "boot-line";
     const m = /^\{leak:(\w+)\}$/.exec(raw);
-    if (m) { div.classList.add('is-leak'); div.textContent = CONTENT.leaks[m[1]] || ""; logEvent('leak', { text: div.textContent, boot: true }); state.ui.leaksFired.add(div.textContent); }
-    else div.textContent = raw;
+    if (m) { div.classList.add('is-leak'); div.textContent = leakText(m[1]); logEvent('leak', { text: div.textContent, boot: true }); state.ui.leaksFired.add(div.textContent); }
+    else div.textContent = raw.replace(/\{session\}/g, state.session);
     return div;
   }
 
@@ -2234,6 +2478,7 @@
     const lines = CONTENT.boot || [];
     const log = $('bootLog');
     $('bootSkip').textContent = CONTENT.bootSkip || "Skip";
+    $('bootNote').textContent = CONTENT.ui.contentNote || "";
     $('bootSkip').addEventListener('click', () => { logEvent('boot_skip', {}); finishBoot(); });
     logEvent('boot_start', {});
     let i = 0;
@@ -2257,7 +2502,7 @@
     bootDone = true;
     if (bootTimer) { clearTimeout(bootTimer); bootTimer = null; }
     // Any boot leak not yet shown still counts as fired: once per shift.
-    (CONTENT.boot || []).forEach((raw) => { const m = /^\{leak:(\w+)\}$/.exec(raw); if (m) state.ui.leaksFired.add(CONTENT.leaks[m[1]]); });
+    (CONTENT.boot || []).forEach((raw) => { const m = /^\{leak:(\w+)\}$/.exec(raw); if (m) state.ui.leaksFired.add(leakText(m[1])); });
     const b = $('screenBoot');
     logEvent('boot_end', {});
     if (immediate) { b.remove(); return; }
@@ -2282,11 +2527,14 @@
       $('screenBoot').remove();
       return;
     }
+    initSession();
     $('sessionId').textContent = "session " + state.session;
+    renderSupportPanel();
     renderMeters();
     renderQueue();
     setTimeout(cycleLogLine, 1500);
     $('threadEmpty').remove();
+    logEvent('session_start', { session: state.session, replay: state.replay });
     runBoot();
   }
 
