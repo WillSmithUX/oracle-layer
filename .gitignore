@@ -1,0 +1,29 @@
+# OS and cloud-sync artifacts (this folder lives in Google Drive)
+desktop.ini
+Thumbs.db
+.DS_Store
+._*
+*.gdoc
+*.gsheet
+*.gslides
+*.tmp
+~$*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Playtest exports and local scratch
+*.log
+oracle_layer_*.json
+scratch/
+tmp/
+
+# Node tooling, if any is ever added for testing (the game itself has no build step)
+node_modules/
+package-lock.json
+
+# Local-only Claude Code settings
+.claude/settings.local.json

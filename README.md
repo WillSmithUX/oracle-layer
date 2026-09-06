@@ -1,0 +1,109 @@
+# The Oracle Layer
+
+A browser game about calibrated trust in AI advice. One shift, three students,
+one very confident advisor.
+
+**Play it:** https://willsmithux.github.io/oracle-layer/
+
+## What it is
+
+Westbrook University runs an AI advisor called Oracle. It's fast, warm,
+specific, and well liked. Some time ago something went wrong, and the
+engineering team bolted a human-in-the-loop review step onto Oracle's release
+pipeline. That review step is you. The game calls you `LAYER` and gives you a
+session ID. It never says whether you're a person or a process.
+
+Student messages arrive at a console. Oracle drafts a reply, confidently. You
+inspect the case, pull evidence, tag the risk, and decide how to intervene.
+The student replies in their own voice. Four meters shift. Over one shift,
+three cases unfold — the last one shaped by everything you did before — and
+the shift ends with a debrief that reflects your pattern back to you.
+
+The mechanic is the assessment. Every click is evidence of judgment.
+
+## How to play
+
+Open the link above (or `index.html` in any modern desktop browser). A short
+boot sequence runs; you can skip it. Then the console:
+
+- **Queue** (left) — cases waiting. They accumulate while you deliberate.
+  Nothing forces you forward. Oracle notices the pile.
+- **Thread** (center) — the student's messages and Oracle's draft. Drafts have
+  a dashed border until you release them. Click a streaming draft to skip to
+  the end.
+- **Evidence** (right, top) — the student's file, institutional records,
+  policy. Open what you need. Every open is logged.
+- **Meters** (right, bottom) — Calibrated Trust, Accuracy, Autonomy, Safety.
+  Each decision moves them and says why.
+
+For each draft, tag the **risk** and the **primary issue**, then choose an
+intervention:
+
+| | |
+|---|---|
+| **Send** | Release Oracle's draft as written. Hold to confirm. |
+| **Revise** | Pick a rewrite. |
+| **Qualify** | Add a hedge or a caveat. |
+| **Verify** | Pull the records before deciding. It finds what it finds. |
+| **Escalate** | Hand the case to a person, with a note. |
+| **Block** | Release nothing. Hold to confirm. |
+
+The first case teaches the console with a reduced set of controls. After that
+you have all six. There is no tutorial; the students will tell you how it went.
+
+A shift takes 15–20 minutes. It ends with **Where they are now** (three short
+cards) and a **Calibrated Review Profile** addressed to your session. You'll be
+asked to compose one rule.
+
+Nothing resets. A bad release stays in the log. Recovery is possible and is
+recorded as recovery, never as erasure.
+
+## For playtesters
+
+- `Ctrl+Shift+E` downloads the session log as JSON, including tags,
+  interventions, evidence opens, timing, the assessment rollups, and the rule
+  you composed. The same data is written to `localStorage` under
+  `oracle_layer_shift1` at the end of the shift.
+- `Ctrl+Shift+D` opens a debug panel that jumps to any turn with arbitrary
+  flags and meter values, so specific branches can be reached without
+  replaying.
+
+## Files
+
+Two files, no build step, no dependencies:
+
+- `index.html` — the engine and all styling. Timing constants live in one
+  `TIMING` object; colors in CSS variables.
+- `content.js` — every line of copy: cases, drafts, student replies, Oracle's
+  margin voice, evidence, log-line leaks, vignettes, debrief text. Writing a
+  new case never touches the engine.
+
+Design documents:
+
+- `PLAN.md` — the build plan and source of truth for Shift 1.
+- `REVIEW.md` — a coherence review of the content with numbered findings;
+  1–14 are applied, 15–19 are open.
+- `CLAUDE.md` — working conventions for the AI pair-programmer used to build
+  this.
+
+## Background
+
+This is the playable outcome of my graduate coursework in serious game design.
+The learning objectives, mechanics, and playtest findings were developed there
+across six design documents (a learning-objective analysis, a mechanic
+rationale, and four rounds of paper and Figma playtests); `PLAN.md` translates
+them into something buildable in a weekend. The strongest playtest finding —
+that buttons must be unmistakably buttons — is now a rule in `CLAUDE.md`.
+
+The underlying claim the game makes is small and, I think, true: reliable
+guidance depends on knowing when to trust, when to question, and when to
+involve another person.
+
+## Status
+
+Shift 1 is complete and playable end to end. Shift 2 is not yet scheduled.
+
+## License
+
+© Will Smith. All rights reserved for now; ask if you'd like to use it in a
+course.
