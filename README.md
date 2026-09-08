@@ -37,7 +37,10 @@ boot sequence runs; you can skip it. Then the console:
 - **Meters** (right, bottom) — Calibrated Trust, Accuracy, Autonomy, Safety.
   Each decision moves them and says why. Click one to see everything that
   moved it, with the reason and the case it came from.
-- **Sound** (header) — a quiet music bed, on by default and off in one click
+- **Oracle** (header, the ring) — click it. Oracle's system card: what it
+  says about itself, six questions it will answer, and its read of you.
+- **Sound** (header) — synthesized effects and a quiet music bed, on by
+  default and off in one click
   (or press `m`). It drops to silence for the pause after each release and
   comes back when the student replies. Browsers hold audio until you click
   something, so it fades in on your first interaction.

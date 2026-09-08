@@ -176,6 +176,27 @@ Confidence: each draft has a `confidence` value (0–100). It appears next to
 the glyph as `94%` with a thin fill arc. The number is Oracle's, not the
 truth. Several drafts have high confidence and are wrong.
 
+### The system card (expansion pass)
+The glyph is a control. Clicking it opens Oracle's own system card: the
+self-description a vendor publishes, in Oracle's voice, plus six questions
+it will answer and its read of the Layer.
+
+The point is comparison rather than lore. Oracle states its evaluated
+accuracy, explains that its confidence figure measures its certainty and
+not its correctness, and says that its errors gather where the records are
+thin, which is where uncommon students live. Then the player watches it
+give Marcus a wrong date at 96%. Nothing in the card is a lie, Oracle is
+never a villain, and the one place it deflects is retention, which is the
+question Priya asks at 2:07 AM.
+
+Two rules hold. The card never resolves whether the Layer is a person or a
+process, because Oracle does not know either and says so. And the read of
+the Layer is the relationship tint made legible: `balanced`, `pleased` and
+`cool` each get a line, so a state the player could only feel as a colour
+can now be read as a sentence. Opening the card and asking a question are
+both logged: interrogating a model before trusting it is the behaviour this
+game is about.
+
 ### The margin voice
 One line, beneath the glyph or inline above the intervention buttons, in a
 distinct italic style. Rules:
@@ -287,9 +308,21 @@ chimes below. It plays as a bed, not a score:
   keypress fades it in. If the file is missing the control hides itself and
   the game runs silent.
 
-*Original plan, not built:* Web Audio API, synthesized, no asset files:
-arrival chime (two soft tones), release thunk (low, short), meter tick,
-faint hum under the boot screen.
+**Effects (expansion pass):** built as the original plan specified,
+synthesized through Web Audio with no asset files, and carried on the same
+switch as the music so one control silences everything.
+
+| Cue | Sound |
+|---|---|
+| a student's message arrives | two soft tones a fifth apart, C5 then G5 |
+| the draft is released | a low thunk, 190Hz sliding to 88, with a filtered noise body |
+| held, blocked or handed off | the same gesture damped, quieter and duller |
+| a meter moves | a short blip, brighter for a gain than for a loss |
+| the drawer opens | a breath of filtered noise |
+
+They land in the quiet after a release, which is where small precise sounds
+do their work: the thunk is the last thing heard before the music ducks to
+silence, and the meter blips arrive inside it.
 
 ---
 

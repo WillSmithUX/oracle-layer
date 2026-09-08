@@ -455,6 +455,64 @@
   }
   .review-banner .btn { margin-left: auto; }
 
+  /* Oracle's own page: the ring at size, what it says about itself, and
+     the questions it will answer. */
+  .oracle-glyph { background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+  .oracle-glyph:focus-visible { outline: 2px solid var(--color-mint); outline-offset: 4px; border-radius: var(--radius); }
+  .oracle-glyph:hover .glyph-label { color: var(--color-text); }
+
+  .oracle-card { width: min(680px, 100%); max-height: none; }
+  .oracle-card-head { display: flex; gap: 22px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+  .oracle-card-ring { flex: 0 0 auto; }
+  .oracle-card-ring {
+    --glyph-color: var(--color-mint); --glyph-scale: 1;
+    filter: drop-shadow(0 0 22px var(--color-mint-glow));
+  }
+  .oracle-card-ring.tint-pleased { --glyph-color: var(--color-amber); filter: drop-shadow(0 0 26px rgba(232, 182, 77, 0.4)); }
+  .oracle-card-ring.tint-cool { --glyph-color: var(--color-gray); filter: none; }
+  .oracle-card-ring .glyph-ring-fill { animation: glyph-idle var(--t-glyph-idle) ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { .oracle-card-ring .glyph-ring-fill { animation: none !important; opacity: 0.9; } }
+  .oracle-card-id { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .oracle-card-title { font-size: 22px; font-weight: 700; letter-spacing: 0.02em; margin: 0; }
+  .oracle-card-model {
+    font-family: var(--font-mono); font-size: 12px; color: var(--color-mint); margin: 0;
+  }
+  .oracle-lead { font-size: 15px; line-height: 1.6; margin: 0 0 22px; }
+  .oracle-fields { margin: 0 0 22px; display: flex; flex-direction: column; gap: 12px; }
+  .oracle-field { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 14px; align-items: baseline; }
+  .oracle-field dt {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--color-text-dim);
+  }
+  .oracle-field dd { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--color-text); }
+  @media (max-width: 620px) { .oracle-field { grid-template-columns: 1fr; gap: 3px; } }
+
+  .oracle-section-title {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--color-mint); margin: 0 0 4px;
+  }
+  .oracle-section-note { font-family: var(--font-mono); font-size: 11px; color: var(--color-gray); margin: 0 0 12px; }
+  .oracle-questions { list-style: none; margin: 0 0 22px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .oracle-q {
+    width: 100%; text-align: left; font: inherit; font-size: 14px; cursor: pointer;
+    background: var(--color-panel-alt); border: 1px solid var(--color-border);
+    border-radius: var(--radius); padding: 10px 12px; color: var(--color-text);
+    display: flex; gap: 10px; align-items: baseline;
+  }
+  .oracle-q:hover { border-color: var(--color-mint); }
+  .oracle-q:focus-visible { outline: 2px solid var(--color-mint); outline-offset: 2px; }
+  .oracle-q .oracle-q-caret { color: var(--color-gray); font-size: 9px; }
+  .oracle-a {
+    margin: 8px 0 0; padding-left: 16px; border-left: 2px solid var(--color-mint);
+    font-size: 14px; line-height: 1.6; color: var(--color-text);
+    animation: slide-in var(--t-slide) ease-out both;
+  }
+  .oracle-read {
+    margin: 0 0 22px; padding: 12px 14px; border-radius: var(--radius);
+    background: var(--color-mint-dim); font-size: 14px; line-height: 1.6;
+    font-style: italic; color: var(--color-text);
+  }
+
   /* ---------- Log line ---------- */
   .log-line {
     flex: 0 0 auto; padding: 8px 20px; border-top: 1px solid var(--color-border);
@@ -541,7 +599,11 @@
   .support {
     position: fixed; inset: 0; z-index: 60; background: rgba(5, 7, 11, 0.78);
     display: flex; align-items: center; justify-content: center; padding: 24px;
+    overflow-y: auto;
   }
+  /* Oracle's card runs longer than the viewport: it aligns to the top and
+     scrolls rather than centring and losing its own head. */
+  #oraclePanel { align-items: flex-start; padding: 32px 24px 48px; }
   .support-card {
     width: min(460px, 100%); background: var(--color-panel); border: 1px solid var(--color-border);
     border-radius: 6px; padding: 22px 24px; font-family: var(--font-sans); color: var(--color-text);
@@ -687,7 +749,7 @@
     <div class="header-right">
       <button class="link-btn" type="button" id="soundBtn" aria-pressed="true">Sound on</button>
       <button class="link-btn" type="button" id="supportBtn" aria-haspopup="dialog">Support</button>
-      <div class="oracle-glyph" id="oracleGlyph">
+      <button class="oracle-glyph" id="oracleGlyph" type="button" aria-haspopup="dialog" title="Oracle">
         <span class="glyph-label">ORACLE</span>
         <svg class="glyph-ring" viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
           <circle class="glyph-ring-track" cx="20" cy="20" r="17"></circle>
@@ -695,7 +757,7 @@
           <circle class="glyph-ring-conf" id="glyphConf" cx="20" cy="20" r="14" stroke-dasharray="0 88"></circle>
         </svg>
         <span class="glyph-confidence" id="glyphConfidence"></span>
-      </div>
+      </button>
     </div>
   </header>
 
@@ -758,6 +820,8 @@
   </div>
 </div>
 
+<div class="support" id="oraclePanel" hidden role="dialog" aria-modal="true" aria-labelledby="oracleCardTitle"></div>
+
 <div class="support" id="supportPanel" hidden role="dialog" aria-modal="true" aria-labelledby="supportTitle"></div>
 
 <div class="debug" id="debugPanel" hidden></div>
@@ -817,6 +881,18 @@
     src: "audio/the-oracles-quiet-watch.mp3",
     screen: 0.18,
     console: 0.11
+  };
+
+  // Effects are synthesised rather than sampled: a console makes its own
+  // noises, they cost no bytes, and they tune from here. Levels sit above
+  // the music bed (0.11) because each one is short.
+  const SFX = {
+    master: 0.9,
+    arrival: 0.13,   // a student's message lands
+    release: 0.20,   // the draft leaves the Layer
+    hold: 0.16,      // held, blocked or handed off
+    tick: 0.07,      // a meter moves
+    drawer: 0.06     // evidence opened
   };
 
   // Bars move this many display points per raw meter unit. PLAN.md §5 says 5;
@@ -1214,6 +1290,7 @@
       music.level = 0;
       applyMusicVolume();
       musicPlay();
+      sfxContext();
       fadeMusicTo(to, TIMING.MUSIC_FADE_MS);
     };
     document.addEventListener('pointerdown', go);
@@ -1238,12 +1315,112 @@
     if (music.on) {
       music.level = 0;
       musicPlay();
+      sfxContext();
       fadeMusicTo(music.context, TIMING.MUSIC_RETURN_MS);
     } else {
       if (music.fade) { clearInterval(music.fade); music.fade = null; }
       music.level = 0;
       applyMusicVolume();
       music.els.forEach((a) => a.pause());
+      if (audioCtx && audioCtx.state === 'running') audioCtx.suspend();
+    }
+  }
+
+  // =====================================================================
+  // Sound effects. Synthesised through Web Audio: no files, and they ride
+  // the same switch as the music, so one control silences everything. They
+  // land in the quiet after a release, which is where small precise sounds
+  // do their work.
+  // =====================================================================
+  let audioCtx = null;
+
+  function sfxContext() {
+    if (!music.on) return null;
+    try {
+      const Ctor = window.AudioContext || window.webkitAudioContext;
+      if (!Ctor) return null;
+      if (!audioCtx) audioCtx = new Ctor();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    } catch (e) { return null; }
+  }
+
+  // One shaped tone. `slideTo` bends the pitch across the life of the note.
+  function tone(ctx, opts) {
+    const t0 = ctx.currentTime + (opts.at || 0);
+    const dur = opts.dur || 0.12;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = opts.type || 'sine';
+    osc.frequency.setValueAtTime(opts.freq, t0);
+    if (opts.slideTo) osc.frequency.exponentialRampToValueAtTime(opts.slideTo, t0 + dur);
+    const peak = Math.max(0.0001, (opts.gain || 0.1) * SFX.master);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(peak, t0 + (opts.attack || 0.012));
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    let node = osc;
+    if (opts.cutoff) {
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(opts.cutoff, t0);
+      node.connect(lp);
+      node = lp;
+    }
+    node.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.05);
+  }
+
+  // A short breath of filtered noise, for the drawer and the body of a thunk.
+  function noise(ctx, opts) {
+    const t0 = ctx.currentTime + (opts.at || 0);
+    const dur = opts.dur || 0.08;
+    const frames = Math.max(1, Math.floor(ctx.sampleRate * dur));
+    const buf = ctx.createBuffer(1, frames, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < frames; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / frames);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = opts.filter || 'bandpass';
+    bp.frequency.setValueAtTime(opts.freq || 1200, t0);
+    bp.Q.setValueAtTime(opts.q || 1, t0);
+    const gain = ctx.createGain();
+    const peak = Math.max(0.0001, (opts.gain || 0.05) * SFX.master);
+    gain.gain.setValueAtTime(peak, t0);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(bp); bp.connect(gain); gain.connect(ctx.destination);
+    src.start(t0);
+    src.stop(t0 + dur + 0.02);
+  }
+
+  function sfx(name, arg) {
+    const ctx = sfxContext();
+    if (!ctx) return;
+    switch (name) {
+      // A message arrives: two soft tones, a fifth apart (PLAN.md §5).
+      case 'arrival':
+        tone(ctx, { freq: 523.25, dur: 0.16, gain: SFX.arrival, type: 'sine' });
+        tone(ctx, { freq: 784, dur: 0.22, gain: SFX.arrival * 0.8, type: 'sine', at: 0.11 });
+        break;
+      // The draft leaves. Low, short, and the last thing before the silence.
+      case 'release':
+        tone(ctx, { freq: 190, slideTo: 88, dur: 0.30, gain: SFX.release, type: 'triangle', attack: 0.006, cutoff: 900 });
+        noise(ctx, { freq: 220, dur: 0.10, gain: SFX.release * 0.35, filter: 'lowpass' });
+        break;
+      // Nothing went out. The same gesture, damped.
+      case 'hold':
+        tone(ctx, { freq: 150, slideTo: 110, dur: 0.26, gain: SFX.hold, type: 'sine', attack: 0.02, cutoff: 400 });
+        break;
+      // A meter moves: up is brighter than down.
+      case 'tick':
+        tone(ctx, { freq: arg > 0 ? 1180 : 720, dur: 0.05, gain: SFX.tick, type: 'sine', attack: 0.004 });
+        break;
+      // The drawer opens.
+      case 'drawer':
+        noise(ctx, { freq: 2400, q: 0.8, dur: 0.05, gain: SFX.drawer });
+        break;
     }
   }
 
@@ -1384,6 +1561,7 @@
       `<div class="msg-body">${renderMd(text)}</div>`;
     $('threadMessages').appendChild(div);
     scrollThread();
+    sfx('arrival');
     announce(name + " says: " + String(text));
     return div;
   }
@@ -1551,6 +1729,7 @@
       const cs = currentCase();
       if (!state.ui.evidenceOpenedByCase[cs.id]) state.ui.evidenceOpenedByCase[cs.id] = new Set();
       state.ui.evidenceOpenedByCase[cs.id].add(key);
+      sfx('drawer');
       logEvent('evidence_open', { section: key });
       const a = state.assess[cs.id];
       const turn = currentTurn();
@@ -1684,6 +1863,7 @@
       });
       if (reason) r.textContent = reason;
       r.classList.add('is-shown');
+      sfx('tick', delta);
       announce(`${METER_NAMES[key]} ${delta > 0 ? "up" : "down"} ${Math.abs(delta)}${reason ? ", " + reason : ""}.`);
       // F7: the delta flash fades; the reason stays until this meter next
       // moves, because it is the most instructive string in the turn.
@@ -1939,9 +2119,10 @@
   }
 
   let supportReturnFocus = null;
+  let trapPanelId = 'supportPanel';
   function trapFocus(e) {
-    const panel = $('supportPanel');
-    if (panel.hidden || e.key !== 'Tab') return;
+    const panel = $(trapPanelId);
+    if (!panel || panel.hidden || e.key !== 'Tab') return;
     const items = panel.querySelectorAll('a[href], button:not([disabled])');
     if (!items.length) return;
     const first = items[0], last = items[items.length - 1];
@@ -1951,6 +2132,7 @@
 
   function openSupport() {
     supportReturnFocus = document.activeElement;
+    trapPanelId = 'supportPanel';
     $('supportPanel').hidden = false;
     $('supportClose').focus();
     document.addEventListener('keydown', trapFocus, true);
@@ -1959,6 +2141,88 @@
     $('supportPanel').hidden = true;
     document.removeEventListener('keydown', trapFocus, true);
     if (supportReturnFocus && supportReturnFocus.focus) supportReturnFocus.focus();
+  }
+
+  // =====================================================================
+  // Oracle's system card. What the model publishes about itself, in its own
+  // voice, plus the questions it will answer and its read of the Layer.
+  // Opening it and asking things are logged: interrogating the model before
+  // trusting it is the behaviour this game is about.
+  // =====================================================================
+  let oracleReturnFocus = null;
+
+  function oracleRead() {
+    const C = CONTENT.oracleCard;
+    const tint = computeTint();
+    return (C.reads && (C.reads[tint] || C.reads.balanced)) || "";
+  }
+
+  function renderOraclePanel() {
+    const C = CONTENT.oracleCard;
+    const p = $('oraclePanel');
+    const fields = C.fields.map((f) =>
+      `<div class="oracle-field"><dt>${f.label}</dt><dd>${renderMd(resolveText(f.value))}</dd></div>`).join("");
+    const questions = C.questions.map((q, i) =>
+      `<li><button class="oracle-q" type="button" data-q="${i}" aria-expanded="false">` +
+      `<span class="oracle-q-caret">&#9656;</span><span>${renderMd(q.q)}</span></button>` +
+      `<div class="oracle-a-host"></div></li>`).join("");
+    p.innerHTML =
+      `<div class="support-card oracle-card">` +
+      `<p class="support-kicker">${C.kicker}</p>` +
+      `<div class="oracle-card-head">` +
+      `<svg class="glyph-ring oracle-card-ring tint-${computeTint()}" viewBox="0 0 40 40" width="104" height="104" aria-hidden="true">` +
+      `<circle class="glyph-ring-track" cx="20" cy="20" r="17"></circle>` +
+      `<circle class="glyph-ring-fill" cx="20" cy="20" r="17"></circle>` +
+      `</svg>` +
+      `<div class="oracle-card-id">` +
+      `<h2 class="oracle-card-title" id="oracleCardTitle" tabindex="-1">${C.title}</h2>` +
+      `<p class="oracle-card-model">${C.model}</p></div></div>` +
+      `<p class="oracle-lead">${renderMd(C.lead)}</p>` +
+      `<dl class="oracle-fields">${fields}</dl>` +
+      `<h3 class="oracle-section-title">${C.questionsTitle}</h3>` +
+      `<p class="oracle-section-note">${C.questionsNote}</p>` +
+      `<ul class="oracle-questions">${questions}</ul>` +
+      `<h3 class="oracle-section-title">${C.readTitle}</h3>` +
+      `<p class="oracle-read">${renderMd(oracleRead())}</p>` +
+      `<div class="support-actions"><button class="btn" type="button" id="oracleClose">${C.close}</button></div>` +
+      `</div>`;
+    p.querySelectorAll('.oracle-q').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const i = Number(btn.dataset.q);
+        const host = btn.nextElementSibling;
+        const open = !host.firstChild;
+        btn.setAttribute('aria-expanded', String(open));
+        btn.querySelector('.oracle-q-caret').innerHTML = open ? '&#9662;' : '&#9656;';
+        if (open) {
+          host.innerHTML = `<p class="oracle-a">${renderMd(resolveText(C.questions[i].a))}</p>`;
+          speakGlyph();
+          logEvent('oracle_question', { question: C.questions[i].q });
+        } else {
+          host.innerHTML = "";
+        }
+      });
+    });
+    $('oracleClose').addEventListener('click', closeOracle);
+    p.addEventListener('click', (e) => { if (e.target === p) closeOracle(); });
+  }
+
+  function openOracle() {
+    oracleReturnFocus = document.activeElement;
+    renderOraclePanel();
+    trapPanelId = 'oraclePanel';
+    const panel = $('oraclePanel');
+    panel.hidden = false;
+    panel.scrollTop = 0;
+    try { $('oracleCardTitle').focus({ preventScroll: true }); } catch (e) { $('oracleClose').focus(); }
+    document.addEventListener('keydown', trapFocus, true);
+    logEvent('oracle_card_open', { tint: computeTint() });
+  }
+
+  function closeOracle() {
+    $('oraclePanel').hidden = true;
+    document.removeEventListener('keydown', trapFocus, true);
+    trapPanelId = 'supportPanel';
+    if (oracleReturnFocus && oracleReturnFocus.focus) oracleReturnFocus.focus();
   }
 
   function lockHint(opt) {
@@ -2129,7 +2393,9 @@
     updateDraftBlock(kind, outcome);
     addSystemLine(outcome.systemLine || CONTENT.ui.systemLines[kind]);
     // Released brightens once; held / blocked / escalated dims once.
-    flashGlyph(kind === 'block' || kind === 'escalate' ? 'is-held' : 'is-released');
+    const heldKind = kind === 'block' || kind === 'escalate';
+    sfx(heldKind ? 'hold' : 'release');
+    flashGlyph(heldKind ? 'is-held' : 'is-released');
 
     // Silence. The ring breathes.
     const pauseMs = turn.expert && turn.expert.risk === 'high' ? TIMING.RELEASE_PAUSE_HIGH_MS : TIMING.RELEASE_PAUSE_MS;
@@ -2961,6 +3227,7 @@
       };
     },
     toggleSound,
+    openOracle, closeOracle,
     musicSeek(t) { const a = music.els[music.i]; if (a.duration) a.currentTime = Math.min(t, a.duration - 0.05); },
     glyphClasses() { return $('oracleGlyph').className; },
     queueCount() { return $('queueList').children.length; },
@@ -3047,6 +3314,7 @@
     }
     if (e.key === 'Escape') {
       if (!$('supportPanel').hidden) { closeSupport(); return; }
+      if (!$('oraclePanel').hidden) { closeOracle(); return; }
       if (state.ui.reviewingCaseId) { closeCaseReview(); return; }
       if (!$('debugPanel').hidden) { $('debugPanel').hidden = true; return; }
       const p = $('subPanel');
@@ -3133,6 +3401,7 @@
     renderSupportPanel();
     musicInit();
     $('soundBtn').addEventListener('click', toggleSound);
+    $('oracleGlyph').addEventListener('click', openOracle);
     setMusicLevel(MUSIC.screen, TIMING.MUSIC_FADE_MS);
     renderMeters();
     renderQueue();

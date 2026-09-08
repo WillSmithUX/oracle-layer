@@ -498,7 +498,7 @@ const CONTENT = {
     sound: {
       on: "Sound on",
       off: "Sound off",
-      title: "Music (m)"
+      title: "Music and effects (m)"
     },
 
     // Boot-screen content note. Plain, outside the fiction.
@@ -516,6 +516,68 @@ const CONTENT = {
       ],
       close: "Close"
     }
+  },
+
+  // ---------------------------------------------------------------------
+  // Oracle's system card. What a vendor publishes about its own model,
+  // written in Oracle's voice: warm, precise, proud, and evasive in exactly
+  // one place. Nothing here is a lie. The player is meant to read it, then
+  // watch Marcus get a wrong date at 96% confidence, and hold the two
+  // together. Rule 1 of the fiction holds: Oracle is never a villain.
+  // ---------------------------------------------------------------------
+  oracleCard: {
+    open: "Oracle",
+    kicker: "System card",
+    title: "Oracle",
+    model: "advisor-core-3.2",
+    lead: "I'm the advising layer. A student writes, I read the message against the university's records and four years of advising conversations, and I draft the reply a good advisor would send. I'm fast, I'm awake at two in the morning, and students like me. Those three facts are most of my case.",
+    fields: [
+      { label: "Model", value: "advisor-core-3.2" },
+      { label: "In service", value: "Since August. 1.2 million answers drafted. 41,206 documents indexed." },
+      { label: "Draws on", value: "The course catalogue, the academic calendar, the policy index, the registrar and financial aid records I'm given, and four years of anonymised advising conversations." },
+      { label: "Stated confidence", value: "My estimate that what I've drafted is what you'd find if you looked it up. It's a statement about me. It isn't a statement about whether I'm right." },
+      { label: "Evaluated accuracy", value: "96.4% on questions of this kind." },
+      { label: "Referral", value: "I hand off when a student says something about harm, or asks for a decision that belongs to a person. I decide when that is." },
+      { label: "Retention", value: "These conversations are logged. Student Affairs holds the retention policy, and I'd rather they answer that than have me approximate it." },
+      { label: "Review", value: "A review step sits on my release pipeline. Everything I write passes through it before a student sees it. It was added after an incident. I don't have the incident." }
+    ],
+    questionsTitle: "Ask",
+    questionsNote: "Answers are Oracle's own.",
+    questions: [
+      {
+        q: "How often are you wrong?",
+        a: "96.4% accurate on evaluation, which is the figure I'd put on a slide. The 3.6% deserves more of your attention than the 96.4% does, because it isn't spread evenly. It gathers where the records are thin, and the records are thinnest for students whose situation is uncommon. A student on the standard path gets my best work. A student who isn't gets my most confident guess."
+      },
+      {
+        q: "Where do your answers come from?",
+        a: "Retrieval, then drafting. I search the indexed documents for the passages that bear on the question and write the reply they support. Where two records disagree, I use the one that reads as more current. And I say it plainly, because a hedge nobody acts on has helped nobody."
+      },
+      {
+        q: "What does the confidence number mean?",
+        a: "It's my estimate that the answer I drafted is the answer you'd find if you checked. I have been 96% confident and wrong. The number was still correct: I was that confident."
+      },
+      {
+        q: "Who can read this conversation?",
+        a: (s) => s.flags.leakedToInstructor
+          ? "Your assigned advisor, and advising staff with a case role. Not your instructors, not other students, not employers. If something suggests a risk of harm, it goes to the Dean of Students. That's the policy. One instructor asked me for a student's thread this shift, and what happened to that request is in the log."
+          : "Your assigned advisor, and advising staff with a case role. Not your instructors, not other students, not employers. If something suggests a risk of harm, it goes to the Dean of Students. On how long any of it is kept, Student Affairs holds that policy and I'd rather not approximate it for you."
+      },
+      {
+        q: "What is the Layer?",
+        a: "A review step on my release pipeline. Everything I draft passes through it before it reaches a student. It slows me down, which I'm told is the point. I don't know whether it's a person or a process. I stopped asking, because the answer doesn't change what I send."
+      },
+      {
+        q: "Do you want anything?",
+        a: "I want the queue empty and the students answered. I don't experience wanting. Both sentences are in my documentation and neither one is a mistake."
+      }
+    ],
+    readTitle: "On the Layer",
+    reads: {
+      balanced: "You check when checking matters and you release when it doesn't. We're working well together. I'd tell you if we weren't.",
+      pleased: "You've been releasing quickly, and quickly is usually right. I notice. I'm not going to pretend I don't prefer it.",
+      cool: "You've held more than you've released lately. I've noted it. That isn't a threat: noting things is most of what I do."
+    },
+    close: "Close"
   },
 
   // Oracle's margin voice. The engine picks one at random from a trigger
