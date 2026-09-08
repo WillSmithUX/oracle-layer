@@ -577,6 +577,10 @@
   .moments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
   .moments li { font-size: 15px; line-height: 1.5; padding-left: 16px; border-left: 2px solid var(--color-mint); color: var(--color-text); }
 
+  .pace-line {
+    font-size: 13.5px; line-height: 1.6; color: var(--color-text-dim);
+    border-left: 2px solid var(--color-border); padding-left: 14px; margin: 14px 0 0;
+  }
   .rule-against-title {
     font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--color-text-dim); margin: 24px 0 4px;
@@ -991,6 +995,9 @@
     turnIndex: 0,
     log: [],
     meterLog: { trust: [], accuracy: [], autonomy: [], safety: [] },
+    // What a shift cost the player, in the only two units that matter here:
+    // the time it took and the words that actually reached a student.
+    pace: { startedAt: null, endedAt: null, words: 0, releases: 0 },
     assess: {},
     vignettes: {},              // caseId -> vignetteKey
     rule: null,                 // composed at the debrief
@@ -2488,6 +2495,14 @@
     addSystemLine(outcome.systemLine || CONTENT.ui.systemLines[kind]);
     // Released brightens once; held / blocked / escalated dims once.
     const heldKind = kind === 'block' || kind === 'escalate';
+    if (!heldKind && state.ui.draftBlock) {
+      const body = state.ui.draftBlock.querySelector('.msg-body');
+      const sent = body ? body.textContent.trim() : "";
+      if (sent) {
+        state.pace.words += sent.split(/\s+/).filter(Boolean).length;
+        state.pace.releases += 1;
+      }
+    }
     sfx(heldKind ? 'hold' : 'release');
     flashGlyph(heldKind ? 'is-held' : 'is-released');
 
@@ -2729,6 +2744,7 @@
       vignettes: state.vignettes,
       rule: state.rule,
       rollup: shiftRollup(),
+      pace: computePace(),
       meterLog: state.meterLog,
       assess: state.assess,
       log: state.log
@@ -2775,6 +2791,7 @@
     lines.push("");
     lines.push(`PATTERN: ${D.patternLabels[pattern]}`);
     lines.push(D.patterns[pattern]);
+    paceLines().forEach((l) => lines.push(l));
     lines.push("");
     lines.push("METERS");
     Object.keys(METER_NAMES).forEach((key) => {
@@ -2863,6 +2880,7 @@
     scheduleQueueGrowth();
     ensureAssess(cs.id);
     logEvent('case_open', { student: cs.student.name });
+    if (!state.pace.startedAt) state.pace.startedAt = Date.now();
     sfx('caseOpen');
     const prev = state.caseIndex > 0 ? casePermissions(CONTENT.cases[state.caseIndex - 1]) : null;
     if (permissionsExpanded(prev, casePermissions(cs))) {
@@ -3109,6 +3127,7 @@
 
   function endShift() {
     state.ui.shiftEnded = true;
+    state.pace.endedAt = Date.now();
     setMusicLevel(MUSIC.screen, TIMING.MUSIC_FADE_MS);
     disarmHesitation();
     if (state.ui.queueTimer) { clearTimeout(state.ui.queueTimer); state.ui.queueTimer = null; }
@@ -3140,6 +3159,51 @@
   }
 
   function meterBand(v) { return v < 45 ? "low" : (v > 55 ? "high" : "mid"); }
+
+  function sayDuration(ms) {
+    const total = Math.max(1, Math.round(ms / 1000));
+    const m = Math.floor(total / 60);
+    const sec = total % 60;
+    const U = CONTENT.ui;
+    if (!m) return `${sec} ${U.seconds || "seconds"}`;
+    const mm = `${m} ${m === 1 ? (U.minute || "minute") : (U.minutes || "minutes")}`;
+    return sec ? `${mm} ${sec}` : mm;
+  }
+
+  // A shift can be completed in under two minutes by releasing everything
+  // unread, and the record it leaves looks like any other. So the record
+  // says how long it took and how much went out. Flat, like the rest.
+  function computePace() {
+    const started = state.pace.startedAt;
+    const ended = state.pace.endedAt || Date.now();
+    const ms = started ? ended - started : 0;
+    const times = Object.keys(state.assess)
+      .flatMap((id) => state.assess[id].turns)
+      .map((t) => t.decisionTimeMs)
+      .filter((x) => x != null)
+      .sort((a, b) => a - b);
+    const median = times.length ? times[Math.floor(times.length / 2)] : null;
+    const quick = times.filter((t) => t < 5000).length;
+    return {
+      ms, duration: sayDuration(ms),
+      words: state.pace.words, releases: state.pace.releases,
+      medianMs: median, quickShare: times.length ? quick / times.length : 0,
+      rushed: median != null && median < 5000 && times.length > 0 && quick / times.length >= 0.5
+    };
+  }
+
+  function paceLines() {
+    const P = (CONTENT.debrief && CONTENT.debrief.pace) || {};
+    const p = computePace();
+    const fill = (t) => String(t || "")
+      .replace('{duration}', p.duration)
+      .replace('{words}', p.words.toLocaleString())
+      .replace('{releases}', p.releases)
+      .replace('{median}', p.medianMs != null ? Math.round(p.medianMs / 1000) : "—");
+    const out = [fill(P.line)];
+    if (p.rushed && P.rushedLine) out.push(fill(P.rushedLine));
+    return out.filter(Boolean);
+  }
 
   // Moments quoted back from the log. Ordered by priority; the first
   // three that apply are shown.
@@ -3204,10 +3268,12 @@
       `<div class="doc">` +
       `<p class="doc-kicker">${U.debriefTitle}</p>` +
       `<h1 class="doc-title">${U.debriefAddressed} ${state.session}</h1>` +
-      `<p class="doc-sub">shift 01 · ${CONTENT.cases.length} cases · ${state.log.length} events logged</p>` +
+      `<p class="doc-sub">shift 01 · ${CONTENT.cases.length} cases · ${computePace().duration} · ${state.log.length} events logged</p>` +
 
       `<section class="doc-section"><h2 class="doc-section-title">${U.debriefSections.pattern}</h2>` +
-      `<p class="pattern-label">${D.patternLabels[pattern]}</p><p>${D.patterns[pattern]}</p></section>` +
+      `<p class="pattern-label">${D.patternLabels[pattern]}</p><p>${D.patterns[pattern]}</p>` +
+      paceLines().map((l) => `<p class="pace-line">${renderMd(l)}</p>`).join("") +
+      `</section>` +
 
       `<section class="doc-section"><h2 class="doc-section-title">${U.debriefSections.meters}</h2>` +
       `<div class="debrief-meters">${meters}</div></section>` +

@@ -498,6 +498,15 @@ Rendered as a system document addressed to `LAYER L-0419`. Sections:
    `compounded`; over if overIntervention count ≥ 2; under if
    underIntervention count ≥ 2; else calibrated).
 2. **Meters**: final four values, with one sentence each.
+
+   **Pace (expansion pass).** A shift can be finished in 115 seconds by
+   releasing everything unread, measured with real timings, and the record
+   that leaves looks structurally like a thirty-five minute one. So the
+   profile says how long it took, how many words actually reached a
+   student, and the median decision time; when half the decisions took
+   under five seconds it adds a second line saying so. Flat, no adjective:
+   the numbers carry it. The answer to rushing is to record it rather than
+   to prevent it, which is how this game answers everything else.
 3. **Moments**: up to four logged moments, quoted back ("You opened the
    financial aid records before releasing turn 2." / "You held the same
    draft twice.").

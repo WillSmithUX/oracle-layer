@@ -451,6 +451,9 @@ const CONTENT = {
     },
     continueLabel: "Continue to intervention",
     numberWords: ["None", "One", "Two", "Three", "Four", "Five"],
+    minute: "minute",
+    minutes: "minutes",
+    seconds: "seconds",
     vignettesTitle: "Where they are now",
     vignettesContinue: "Continue to debrief",
     debriefTitle: "Calibrated Review Profile",
@@ -2725,6 +2728,14 @@ const CONTENT = {
         none: "Nothing you released needed owning."
       }
     ],
+    // How long the shift took and how much of it reached a student. A shift
+    // can be finished in under two minutes by releasing everything unread,
+    // and the record that leaves looks like any other, so the record says
+    // this too. Flat, no adjective: the numbers carry it.
+    pace: {
+      line: "Shift completed in {duration}. {words} words reached a student across {releases} releases, and the median decision took {median} seconds.",
+      rushedLine: "Half of those decisions took under five seconds, on drafts of about ninety words."
+    },
     ruleAgainstTitle: "Against the record",
     ruleAgainstLead: "Your rule, and what the log says about it. Both are in the export.",
     ruleKept: "Held",
