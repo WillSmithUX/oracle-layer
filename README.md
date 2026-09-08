@@ -62,7 +62,7 @@ you have all six. There is no tutorial; the students will tell you how it went.
 
 A shift takes 30–40 minutes. It ends with **Where they are now** (one short
 card per case) and a **Calibrated Review Profile** addressed to your session.
-You'll be asked to compose one rule.
+You'll be asked to compose one rule, and the log will answer it.
 
 Not every draft is wrong. One case is right the first time and wrong the
 second, in the same conversation, seven minutes apart. Holding a good draft

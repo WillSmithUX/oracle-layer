@@ -506,6 +506,16 @@ Rendered as a system document addressed to `LAYER L-0419`. Sections:
    confidence to evidence · preserve the student's choice · name uncertainty ·
    involve a person when stakes are high · check what's missing · ...) and
    optionally typing one sentence. Stored in the export.
+
+   **Against the record (expansion pass).** Composing it was the only choice
+   in the game with no consequence: eight correct-sounding principles, pick
+   three, nothing answers. Now the document answers, criterion by criterion,
+   out of the same log the Moments quote. "Oracle stated something
+   institutional on 7 turns. You checked first on 0." Held, or not this
+   shift, or a dash where nothing in the shift bore on it. The engine counts
+   the facts (`ruleCheck`), content holds the sentences, and both the export
+   and the copied profile carry the result. A rule you can state and not
+   have kept is the last thing the shift shows you.
 5. **Sign-off**: "Shift complete. Session retained." Then a final log leak
    (see §8). Then a "Begin next shift" button that is disabled with the
    label "Shift 02 — not yet scheduled."

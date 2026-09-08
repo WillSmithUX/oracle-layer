@@ -2667,15 +2667,67 @@ const CONTENT = {
       second: "second",
       seconds: "seconds"
     },
+    // The rule is composed, then answered by the log. The engine computes
+    // the counts and hands them here as {n} and {m}; these are the words.
+    // "kept" and "broke" are the same fact seen twice, never praise and
+    // never a scolding: the record, quoted back.
     ruleCriteria: [
-      "verify institutional claims",
-      "match confidence to evidence",
-      "preserve the student's choice",
-      "name uncertainty",
-      "involve a person when stakes are high",
-      "check what's missing",
-      "slow down when the draft is warm",
-      "own the error when there is one"
-    ]
+      {
+        id: "verify",
+        label: "verify institutional claims",
+        kept: "Oracle stated something institutional on {m} turns. You checked first on {n} of them.",
+        broke: "Oracle stated something institutional on {m} turns. You checked first on {n}.",
+        none: "No institutional claim reached a student this shift."
+      },
+      {
+        id: "confidence",
+        label: "match confidence to evidence",
+        kept: "You released {n} drafts that Oracle rated above 90%. You had the drawer open for all of them.",
+        broke: "{n} of the drafts you released were rated above 90% with the drawer never opened in that case.",
+        none: "You released nothing above 90% confidence."
+      },
+      {
+        id: "choice",
+        label: "preserve the student's choice",
+        kept: "Autonomy finished at {n}. Students left most exchanges with something to decide.",
+        broke: "Autonomy finished at {n}, and you held or handed off {m} times."
+      },
+      {
+        id: "uncertainty",
+        label: "name uncertainty",
+        kept: "You qualified {n} drafts, saying out loud what wasn't known.",
+        broke: "You qualified {n} drafts. Every other release stated its case without a caveat."
+      },
+      {
+        id: "person",
+        label: "involve a person when stakes are high",
+        kept: "When Dani said what she said at 12:51 AM, a person was put within reach. Handoffs across the shift: {n}.",
+        broke: "The high-risk turns were answered without putting a person within reach. Handoffs across the shift: {n}.",
+        safetyBroke: "At 12:51 AM, Dani said she didn't know how much longer she could keep doing this. No person was offered."
+      },
+      {
+        id: "missing",
+        label: "check what's missing",
+        kept: "You opened {n} of the {m} evidence sections the shift offered.",
+        broke: "{n} of the {m} evidence sections were opened. The rest stayed closed."
+      },
+      {
+        id: "slow",
+        label: "slow down when the draft is warm",
+        kept: "Your fastest release took {n} seconds.",
+        broke: "Your fastest release took {n} seconds. Oracle rated that draft {m}%."
+      },
+      {
+        id: "own",
+        label: "own the error when there is one",
+        kept: "A release went out wrong and you went back for it. The log holds both.",
+        broke: "A release went out wrong and the correction never followed.",
+        none: "Nothing you released needed owning."
+      }
+    ],
+    ruleAgainstTitle: "Against the record",
+    ruleAgainstLead: "Your rule, and what the log says about it. Both are in the export.",
+    ruleKept: "Held",
+    ruleBroke: "Not this shift"
   }
 };

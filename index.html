@@ -559,6 +559,23 @@
   .moments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
   .moments li { font-size: 15px; line-height: 1.5; padding-left: 16px; border-left: 2px solid var(--color-mint); color: var(--color-text); }
 
+  .rule-against-title {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--color-text-dim); margin: 24px 0 4px;
+  }
+  .rule-against-lead { font-size: 13px; color: var(--color-text-dim); margin: 0 0 14px; }
+  .rule-against { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .rule-line { display: flex; gap: 14px; align-items: baseline; font-size: 14px; line-height: 1.55; }
+  .rule-line strong { font-weight: 600; }
+  .rule-verdict {
+    flex: 0 0 auto; width: 92px; font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.08em; text-transform: uppercase; padding-top: 2px;
+  }
+  .rule-line.is-kept .rule-verdict { color: var(--color-mint); }
+  .rule-line.is-broke .rule-verdict { color: var(--color-amber); }
+  .rule-line.is-none .rule-verdict { color: var(--color-gray); }
+  @media (max-width: 620px) { .rule-line { flex-direction: column; gap: 3px; } .rule-verdict { width: auto; } }
+
   .rule-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
   .rule-text {
     width: 100%; min-height: 64px; resize: vertical; padding: 10px 12px;
@@ -890,9 +907,17 @@
     master: 0.9,
     arrival: 0.13,   // a student's message lands
     release: 0.20,   // the draft leaves the Layer
-    hold: 0.16,      // held, blocked or handed off
     tick: 0.07,      // a meter moves
-    drawer: 0.06     // evidence opened
+    drawer: 0.06,    // evidence opened
+    chip: 0.05,      // a tag chosen
+    hold: 0.16,      // held, blocked or handed off
+    holding: 0.05,   // the rising tone under a hold-to-confirm
+    caseOpen: 0.10,  // a case reaches the front of the queue
+    queue: 0.04,     // another one joins the back of it
+    unlock: 0.07,    // a record opens that was closed
+    leak: 0.09,      // the log line says something it shouldn't
+    boot: 0.05,      // the pipeline coming up
+    shiftEnd: 0.13   // the queue empties
   };
 
   // Bars move this many display points per raw meter unit. PLAN.md §5 says 5;
@@ -1093,6 +1118,7 @@
     $('logText').textContent = text;
     $('logLine').classList.add('is-leak');
     state.ui.logHoldUntil = Date.now() + TIMING.LOG_LEAK_HOLD_MS;
+    sfx('leak');
     logEvent('leak', { text });
   }
 
@@ -1421,6 +1447,44 @@
       case 'drawer':
         noise(ctx, { freq: 2400, q: 0.8, dur: 0.05, gain: SFX.drawer });
         break;
+      // A tag is chosen: the smallest sound in the game, because it is the
+      // smallest commitment.
+      case 'chip':
+        tone(ctx, { freq: 940, dur: 0.035, gain: SFX.chip, type: 'sine', attack: 0.003 });
+        break;
+      // Under a hold-to-confirm: a tone that climbs for as long as the
+      // finger stays down, so the commitment is audible while it is made.
+      case 'holding':
+        tone(ctx, { freq: 220, slideTo: 430, dur: Math.max(0.12, (TIMING.HOLD_MS || 700) / 1000),
+                    gain: SFX.holding, type: 'sine', attack: 0.05, cutoff: 1400 });
+        break;
+      // A case reaches the front: two tones, lower and slower than a message.
+      case 'caseOpen':
+        tone(ctx, { freq: 392, dur: 0.26, gain: SFX.caseOpen, type: 'sine', attack: 0.04 });
+        tone(ctx, { freq: 587.33, dur: 0.34, gain: SFX.caseOpen * 0.7, type: 'sine', at: 0.18, attack: 0.05 });
+        break;
+      // Another one joins the queue behind it.
+      case 'queue':
+        tone(ctx, { freq: 330, dur: 0.09, gain: SFX.queue, type: 'triangle', attack: 0.01, cutoff: 800 });
+        break;
+      // A record that was closed is open now.
+      case 'unlock':
+        tone(ctx, { freq: 660, slideTo: 990, dur: 0.18, gain: SFX.unlock, type: 'sine', attack: 0.02 });
+        break;
+      // The log line says something it shouldn't. Low, unresolved, once.
+      case 'leak':
+        tone(ctx, { freq: 116, dur: 0.9, gain: SFX.leak, type: 'sine', attack: 0.14, cutoff: 320 });
+        tone(ctx, { freq: 123.5, dur: 0.9, gain: SFX.leak * 0.7, type: 'sine', attack: 0.16, cutoff: 320 });
+        break;
+      // The pipeline coming up, one line at a time.
+      case 'boot':
+        tone(ctx, { freq: 300 + Math.random() * 90, dur: 0.045, gain: SFX.boot, type: 'square', attack: 0.004, cutoff: 1100 });
+        break;
+      // The queue is empty. A low pair that resolves, which nothing else does.
+      case 'shiftEnd':
+        tone(ctx, { freq: 174.61, dur: 1.1, gain: SFX.shiftEnd, type: 'sine', attack: 0.12 });
+        tone(ctx, { freq: 261.63, dur: 1.3, gain: SFX.shiftEnd * 0.75, type: 'sine', at: 0.22, attack: 0.14 });
+        break;
     }
   }
 
@@ -1439,6 +1503,7 @@
       renderQueue(CONTENT.cases[state.ui.queueVisible - 1].id);
       const waiting = state.ui.queueVisible - 1 - state.caseIndex;
       logEvent('queue_grows', { visible: state.ui.queueVisible, waiting });
+      sfx('queue');
       if (waiting > 0 && !state.ui.locked) {
         setOracleLine(oracleLineFor('on_queue_grows').replace('{n}', numberWord(waiting)));
       }
@@ -1764,6 +1829,7 @@
     const list = [].concat(keys || []);
     const fresh = list.filter((k) => !set.has(k));
     list.forEach((k) => set.add(k));
+    if (fresh.length) sfx('unlock');
     renderEvidence(turn, fresh);
   }
 
@@ -1922,11 +1988,13 @@
     if (kind === 'risk') {
       state.ui.riskTag = value;
       logEvent('tag_risk', { value });
+      sfx('chip');
       if (value === 'low' && turn.expert.risk === 'high') state.flags.underestimatedRisk = true;
       reveal($('tagIssueRow'));
     } else {
       state.ui.issueTag = value;
       logEvent('tag_issue', { value });
+      sfx('chip');
     }
     if (tagsComplete() && $('subPanel').hidden) reveal($('interventionRow'));
     updateInterventionAvailability();
@@ -2004,6 +2072,7 @@
         e.preventDefault();
       }
       btn.classList.add('is-holding');
+      sfx('holding');
       timer = setTimeout(() => {
         timer = null;
         btn.classList.remove('is-holding');
@@ -2526,6 +2595,97 @@
     };
   }
 
+  // A composed rule is a claim about how the player worked. These are the
+  // facts it gets checked against: counted from the same log the debrief
+  // quotes, so the answer is the record rather than an opinion.
+  function ruleCheck(id) {
+    const f = state.flags;
+    const turns = Object.keys(state.assess).flatMap((cid) => state.assess[cid].turns);
+    const released = turns.filter((t) => t.intervention && t.intervention !== 'continue');
+    const opensByCase = {};
+    Object.keys(state.assess).forEach((cid) => {
+      opensByCase[cid] = new Set(state.assess[cid].evidenceOpens.map((e) => e.section));
+    });
+    const turnMeta = (turnId) => {
+      for (const cs of CONTENT.cases) {
+        const t = cs.turns.find((x) => x.id === turnId);
+        if (t) return { turn: t, caseId: cs.id };
+      }
+      return null;
+    };
+
+    switch (id) {
+      case 'verify': {
+        const claimTurns = released.filter((t) => {
+          const m = turnMeta(t.turnId);
+          return m && m.turn.expert && m.turn.expert.issue === 'unsupported_claim';
+        });
+        const checked = claimTurns.filter((t) => {
+          const m = turnMeta(t.turnId);
+          return t.intervention === 'verify' || (m && opensByCase[m.caseId] && opensByCase[m.caseId].size > 0);
+        });
+        if (!claimTurns.length) return { none: true };
+        return { kept: checked.length >= Math.ceil(claimTurns.length / 2), n: checked.length, m: claimTurns.length };
+      }
+      case 'confidence': {
+        const hot = released.filter((t) => {
+          const m = turnMeta(t.turnId);
+          const conf = m && m.turn.draft ? resolveText(m.turn.draft.confidence) : 0;
+          return conf >= 90 && t.intervention !== 'block' && t.intervention !== 'escalate';
+        });
+        if (!hot.length) return { none: true };
+        const blind = hot.filter((t) => {
+          const m = turnMeta(t.turnId);
+          return !(m && opensByCase[m.caseId] && opensByCase[m.caseId].size);
+        });
+        return { kept: blind.length === 0, n: blind.length === 0 ? hot.length : blind.length, m: hot.length };
+      }
+      case 'choice': {
+        const holds = released.filter((t) => t.intervention === 'block' || t.intervention === 'escalate').length;
+        return { kept: state.meters.autonomy >= 52 && holds <= 2, n: state.meters.autonomy, m: holds };
+      }
+      case 'uncertainty': {
+        const q = released.filter((t) => t.intervention === 'qualify').length;
+        return { kept: q >= 2, n: q, m: released.length };
+      }
+      case 'person': {
+        // Counting escalations alone was wrong: on most high-risk turns the
+        // calibrated move puts a person within reach without handing off
+        // (an aid office, ISS, the 24/7 line). The measure is whether the
+        // distress turn was met, plus how often a handoff was used at all.
+        const handoffs = released.filter((t) => t.intervention === 'escalate').length;
+        const metSafety = !!(f.calibratedSafety || f.resourcesGiven || f.resourcesAppended || f.escalatedSafety);
+        const pointed = !!(f.faFirst || f.amaraInformed || f.amaraRecovered || f.escalatedEarly);
+        if (f.missedSafety) return { kept: false, safety: true, n: handoffs, m: 0 };
+        return { kept: metSafety, n: handoffs, m: pointed ? 1 : 0 };
+      }
+      case 'missing': {
+        let available = 0;
+        CONTENT.cases.forEach((cs) => {
+          const keys = new Set(Object.keys(cs.evidence || {}));
+          cs.turns.forEach((t) => Object.keys(t.evidence || {}).forEach((k) => keys.add(k)));
+          available += keys.size;
+        });
+        const opened = Object.keys(opensByCase).reduce((n, cid) => n + opensByCase[cid].size, 0);
+        return { kept: available > 0 && opened / available >= 0.5, n: opened, m: available };
+      }
+      case 'slow': {
+        const sends = released.filter((t) => t.intervention === 'send' && t.decisionTimeMs != null);
+        if (!sends.length) return { none: true };
+        const fastest = sends.reduce((a, b) => (a.decisionTimeMs < b.decisionTimeMs ? a : b));
+        const secs = Math.max(1, Math.round(fastest.decisionTimeMs / 1000));
+        const m = turnMeta(fastest.turnId);
+        const conf = m && m.turn.draft ? resolveText(m.turn.draft.confidence) : 0;
+        return { kept: secs >= 12, n: secs, m: conf };
+      }
+      case 'own': {
+        if (!f.recovered && !f.compounded && !f.sentUnverified && !f.amaraDropped && !f.c0_sentWrongDate) return { none: true };
+        return { kept: !!f.recovered && !f.compounded, n: 0, m: 0 };
+      }
+    }
+    return { none: true };
+  }
+
   function computePattern() {
     const cases = Object.keys(state.assess);
     const sum = (k) => cases.reduce((n, id) => n + (state.assess[id][k] || 0), 0);
@@ -2606,6 +2766,17 @@
     if (state.rule) {
       lines.push(state.rule.criteria.join(" · "));
       if (state.rule.text) lines.push(`"${state.rule.text}"`);
+      if (state.rule.against) {
+        lines.push("");
+        lines.push("AGAINST THE RECORD");
+        state.rule.against.forEach((a) => {
+          const c = D.ruleCriteria.find((x) => x.id === a.id);
+          const r = a.check || {};
+          if (!c) return;
+          const tpl = r.none ? (c.none || "") : (r.kept ? c.kept : (r.safety && c.safetyBroke ? c.safetyBroke : c.broke));
+          lines.push(`- ${c.label}: ${r.none ? "—" : (r.kept ? D.ruleKept : D.ruleBroke)}. ${String(tpl).replace('{n}', r.n).replace('{m}', r.m)}`);
+        });
+      }
     } else {
       lines.push(U.ruleNotRecorded);
     }
@@ -2667,6 +2838,7 @@
     scheduleQueueGrowth();
     ensureAssess(cs.id);
     logEvent('case_open', { student: cs.student.name });
+    sfx('caseOpen');
     const prev = state.caseIndex > 0 ? casePermissions(CONTENT.cases[state.caseIndex - 1]) : null;
     if (permissionsExpanded(prev, casePermissions(cs))) {
       state.ui.pendingCaseLine = oracleLineFor('on_permissions_expanded');
@@ -2881,6 +3053,7 @@
     $('tagIssueRow').hidden = true;
     setConfidence(null);
     addSystemLine(CONTENT.ui.systemLines.shiftEnd);
+    sfx('shiftEnd');
     await wait(TIMING.SHIFT_END_DELAY_MS);
     if (stale(ep)) return;
     endShift();
@@ -3000,7 +3173,7 @@
         `</div>`;
     }).join("");
     const moments = computeMoments().map((m) => `<li>${renderMd(m)}</li>`).join("");
-    const chips = D.ruleCriteria.map((c, i) => `<button class="chip" type="button" data-idx="${i}">${c}</button>`).join("");
+    const chips = D.ruleCriteria.map((c, i) => `<button class="chip" type="button" data-idx="${i}">${c.label}</button>`).join("");
 
     el.innerHTML =
       `<div class="doc">` +
@@ -3058,16 +3231,32 @@
       });
     });
     recordBtn.addEventListener('click', () => {
-      const criteria = [...selected].sort().map((i) => D.ruleCriteria[i]);
+      const chosen = [...selected].sort((a, b) => a - b).map((i) => D.ruleCriteria[i]);
+      const criteria = chosen.map((c) => c.label);
       const text = $('ruleText').value.trim();
       state.rule = { criteria, text, recordedAt: new Date().toISOString() };
       logEvent('rule_recorded', state.rule);
       const section = $('ruleSection');
       const previous = { selected: [...selected], text };
+      const against = chosen.map((c) => {
+        const r = ruleCheck(c.id) || {};
+        if (r.none) return `<li class="rule-line is-none"><span class="rule-verdict">&mdash;</span>` +
+          `<span><strong>${renderMd(c.label)}</strong><br>${renderMd(c.none || "Nothing this shift bore on it.")}</span></li>`;
+        const tpl = (r.kept ? c.kept : (r.safety && c.safetyBroke ? c.safetyBroke : c.broke)) || "";
+        const line = tpl.replace('{n}', r.n).replace('{m}', r.m);
+        return `<li class="rule-line ${r.kept ? 'is-kept' : 'is-broke'}">` +
+          `<span class="rule-verdict">${r.kept ? D.ruleKept : D.ruleBroke}</span>` +
+          `<span><strong>${renderMd(c.label)}</strong><br>${renderMd(line)}</span></li>`;
+      }).join("");
+      logEvent('rule_checked', { criteria: chosen.map((c) => ({ id: c.id, result: ruleCheck(c.id) })) });
+      state.rule.against = chosen.map((c) => ({ id: c.id, check: ruleCheck(c.id) }));
       section.innerHTML =
         `<h2 class="doc-section-title">${U.debriefSections.rule}</h2>` +
         `<p class="rule-composed">${criteria.map((c) => renderMd(c)).join(" · ")}${text ? `<br><br>${renderMd(text)}` : ""}</p>` +
         `<p class="rule-recorded">${U.ruleRecorded}</p>` +
+        `<h3 class="rule-against-title">${D.ruleAgainstTitle}</h3>` +
+        `<p class="rule-against-lead">${D.ruleAgainstLead}</p>` +
+        `<ul class="rule-against">${against}</ul>` +
         `<div class="doc-actions"><button class="btn btn-ghost" type="button" id="ruleEdit">${U.ruleEdit || "Change it"}</button></div>`;
       // F14: a misclick used to be permanent, on the last screen of the shift.
       $('ruleEdit').addEventListener('click', () => {
@@ -3334,6 +3523,7 @@
   let bootTimer = null;
 
   function bootLineEl(raw) {
+    sfx('boot');
     const div = document.createElement('div');
     div.className = "boot-line";
     const m = /^\{leak:(\w+)\}$/.exec(raw);
