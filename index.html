@@ -513,6 +513,24 @@
     font-style: italic; color: var(--color-text);
   }
 
+  /* Number badges. Invisible until the player touches the keyboard, then
+     every row of controls carries the digit that picks it. Discovery
+     without a word of instruction. */
+  .key-badge {
+    display: none; font-family: var(--font-mono); font-size: 9px;
+    color: var(--color-gray); border: 1px solid var(--color-border);
+    border-radius: 3px; padding: 0 3px; margin-right: 7px; line-height: 1.5;
+  }
+  body.is-keyboard .key-badge { display: inline-block; }
+  body.is-keyboard .chip .key-badge { margin-right: 5px; }
+  .btn .key-badge { border-color: rgba(255, 255, 255, 0.22); }
+  .btn-primary .key-badge { border-color: rgba(5, 19, 13, 0.35); color: rgba(5, 19, 13, 0.7); }
+  .key-hint-row {
+    display: none; margin: 10px 0 0; font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.06em; color: var(--color-gray);
+  }
+  body.is-keyboard .key-hint-row { display: block; }
+
   /* ---------- Log line ---------- */
   .log-line {
     flex: 0 0 auto; padding: 8px 20px; border-top: 1px solid var(--color-border);
@@ -803,6 +821,7 @@
         </div>
         <div class="intervention-row" id="interventionRow" role="group" aria-label="Interventions"></div>
         <p class="intervention-hint" id="interventionHint"></p>
+        <p class="key-hint-row" id="keyHintRow">1&ndash;9 pick from the row · backspace steps back · enter continues · e evidence · o oracle · m sound</p>
         <div class="sub-panel" id="subPanel" hidden></div>
       </div>
     </section>
@@ -1002,6 +1021,7 @@
       hesitationFired: false,     // once per turn
       queueVisible: 1,            // how many cases the queue currently shows
       queueTimer: null,
+      keyboardActive: false,
       shiftEnded: false,
       finishStream: null
     }
@@ -1966,15 +1986,16 @@
     if (!tags) return;
     const allowed = casePermissions(currentCase()).issues;
     state.ui.issueOptions = tags.issues.filter((i) => allowed.has(i));
-    tags.risk.forEach((r) => riskWrap.appendChild(makeChip(CONTENT.ui.riskLabels[r] || r, () => selectTag('risk', r, riskWrap))));
-    state.ui.issueOptions.forEach((i) => issueWrap.appendChild(makeChip(CONTENT.ui.issueLabels[i] || i, () => selectTag('issue', i, issueWrap))));
+    tags.risk.forEach((r, n) => riskWrap.appendChild(makeChip(CONTENT.ui.riskLabels[r] || r, () => selectTag('risk', r, riskWrap), n + 1)));
+    state.ui.issueOptions.forEach((i, n) => issueWrap.appendChild(makeChip(CONTENT.ui.issueLabels[i] || i, () => selectTag('issue', i, issueWrap), n + 1)));
   }
 
-  function makeChip(label, onClick) {
+  function makeChip(label, onClick, index) {
     const b = document.createElement('button');
     b.type = "button";
     b.className = "chip";
-    b.textContent = label;
+    b.innerHTML = (index ? badge(index) : "") + `<span>${renderMd(label)}</span>`;
+    if (index) b.setAttribute('aria-keyshortcuts', String(index));
     b.addEventListener('click', onClick);
     return b;
   }
@@ -2021,7 +2042,8 @@
       b.type = "button";
       b.className = "btn btn-primary btn-wide";
       b.dataset.kind = "continue";
-      b.textContent = CONTENT.ui.continueLabel;
+      b.innerHTML = `${badge("&crarr;")}${CONTENT.ui.continueLabel}`;
+      b.setAttribute('aria-keyshortcuts', 'Enter');
       b.addEventListener('click', onContinue);
       row.appendChild(b);
     } else {
@@ -2032,12 +2054,14 @@
         b.type = "button";
         b.dataset.kind = kind;
         b.className = "btn" + (kind === 'send' ? " btn-primary" : "") + (kind === 'block' ? " btn-danger" : "");
+        const n = row.children.length + 1;
+        b.setAttribute('aria-keyshortcuts', String(n));
         if (kind === 'send' || kind === 'block' || kind === 'verify') {
           b.classList.add('btn-hold');
-          b.innerHTML = `${INTERVENTION_LABELS[kind]}<span class="btn-hint">hold</span>`;
+          b.innerHTML = `${badge(n)}${INTERVENTION_LABELS[kind]}<span class="btn-hint">hold</span>`;
           makeHoldButton(b, () => chooseIntervention(kind));
         } else {
-          b.textContent = INTERVENTION_LABELS[kind];
+          b.innerHTML = `${badge(n)}${INTERVENTION_LABELS[kind]}`;
           b.addEventListener('click', () => chooseIntervention(kind));
         }
         const hints = (CONTENT.ui && CONTENT.ui.interventionHints) || {};
@@ -2299,12 +2323,13 @@
     return `${label} not opened`;
   }
 
-  function optionButton(opt, onSelect) {
+  function optionButton(opt, onSelect, index) {
     const b = document.createElement('button');
     b.type = "button";
     b.className = "btn btn-option";
     const locked = opt.requires && !evidenceOpened(opt.requires);
-    b.innerHTML = `<span>${opt.label}</span>` + (locked ? `<span class="btn-hint">${lockHint(opt)}</span>` : "");
+    b.innerHTML = `<span>${index ? badge(index) : ""}${opt.label}</span>` + (locked ? `<span class="btn-hint">${lockHint(opt)}</span>` : "");
+    if (index) b.setAttribute('aria-keyshortcuts', String(index));
     b.disabled = !!locked;
     b.addEventListener('click', () => onSelect(opt));
     return b;
@@ -2335,13 +2360,13 @@
     const list = document.createElement('div');
     list.className = "option-list";
     const buttons = [];
-    options.forEach((opt) => {
+    options.forEach((opt, oi) => {
       const btn = optionButton(opt, (o) => {
         logEvent('subchoice', { kind, label: o.label });
         // `kind` is the intervention the player chose (e.g. verify) and is
         // what gets scored; `o.as` only changes how the release is rendered.
         release(o.as || kind, o, { optionLabel: o.label, fit: resolveText(o.fit), fitKind: kind });
-      });
+      }, oi + 1);
       list.appendChild(btn);
       buttons.push({ btn, opt });
     });
@@ -3485,6 +3510,88 @@
   // =====================================================================
   // Keyboard
   // =====================================================================
+  // =====================================================================
+  // Keyboard play. One rule the player learns in a second: the digits
+  // address the row that is waiting for them. Risk, then issue, then the
+  // interventions, then whatever a sub-panel is asking. Enter advances the
+  // one obvious step. Send, Block and Verify still have to be held, on the
+  // keyboard as on the mouse, because they still commit.
+  // =====================================================================
+  function markKeyboard() {
+    if (state.ui.keyboardActive) return;
+    state.ui.keyboardActive = true;
+    document.body.classList.add('is-keyboard');
+    logEvent('keyboard_used', {});
+  }
+
+  function badge(n) { return `<span class="key-badge">${n}</span>`; }
+
+  // The row a digit belongs to right now.
+  function activeRow() {
+    if (!$('subPanel').hidden && subPanelOptions) return 'options';
+    if (state.ui.locked) return null;
+    if (!$('tagRiskRow').hidden && !state.ui.riskTag && !state.ui.tagsFrozen) return 'risk';
+    if (!$('tagIssueRow').hidden && !state.ui.issueTag && !state.ui.tagsFrozen) return 'issue';
+    if (!$('interventionRow').hidden) return 'interventions';
+    return null;
+  }
+
+  function rowButtons(row) {
+    if (row === 'risk') return Array.from($('tagRisk').querySelectorAll('.chip'));
+    if (row === 'issue') return Array.from($('tagIssue').querySelectorAll('.chip'));
+    if (row === 'interventions') return Array.from($('interventionRow').querySelectorAll('.btn'));
+    if (row === 'options') return Array.from($('subPanel').querySelectorAll('.btn-option'));
+    return [];
+  }
+
+  // A digit on a hold control behaves like a finger on it: press and keep
+  // pressing. Releasing early cancels, exactly as letting go of the mouse does.
+  let keyHold = null;
+  function startKeyHold(btn) {
+    if (keyHold) return;
+    btn.classList.add('is-holding');
+    sfx('holding');
+    keyHold = {
+      btn,
+      timer: setTimeout(() => {
+        btn.classList.remove('is-holding');
+        keyHold = null;
+        chooseIntervention(btn.dataset.kind);
+      }, TIMING.HOLD_MS)
+    };
+  }
+  function cancelKeyHold() {
+    if (!keyHold) return;
+    clearTimeout(keyHold.timer);
+    keyHold.btn.classList.remove('is-holding');
+    keyHold = null;
+  }
+  document.addEventListener('keyup', cancelKeyHold);
+  window.addEventListener('blur', cancelKeyHold);
+
+  function pressDigit(n) {
+    const row = activeRow();
+    if (!row) return false;
+    const btns = rowButtons(row);
+    const btn = btns[n - 1];
+    if (!btn || btn.disabled) return false;
+    if (row === 'interventions' && btn.classList.contains('btn-hold')) { startKeyHold(btn); return true; }
+    btn.click();
+    return true;
+  }
+
+  // Enter never releases anything. It advances the step that has only one
+  // way forward, which is what a replay spends its time on.
+  function pressEnter() {
+    if (!$('screenVignettes').hidden) { const b = $('toDebrief'); if (b) { b.click(); return true; } }
+    if (state.ui.reviewingCaseId) { closeCaseReview(); return true; }
+    if (!$('interventionRow').hidden) {
+      const cont = $('interventionRow').querySelector('.btn[data-kind="continue"]');
+      if (cont && !cont.disabled) { cont.click(); return true; }
+    }
+    return false;
+  }
+
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
       e.preventDefault();
@@ -3500,6 +3607,62 @@
       const t = e.target;
       const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
       if (!typing) { e.preventDefault(); toggleSound(); return; }
+    }
+    const typingNow = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
+    const dialogOpen = !$('supportPanel').hidden || !$('oraclePanel').hidden || !$('debugPanel').hidden;
+    if (!typingNow && !dialogOpen && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (e.key === 'Tab') markKeyboard();
+      // A streaming draft swallows the first key: skipping and acting in the
+      // same press would commit a decision the player has not finished reading.
+      const streaming = !!state.ui.finishStream;
+      if (/^[1-9]$/.test(e.key)) {
+        markKeyboard();
+        e.preventDefault();
+        if (streaming) { state.ui.finishStream(); return; }
+        if (pressDigit(Number(e.key))) return;
+        return;
+      }
+      // Digits address the waiting row, so changing your mind needs a way
+      // back: Backspace clears the last tag and hands the digits to it again.
+      if (e.key === 'Backspace') {
+        markKeyboard();
+        if (!state.ui.locked && !state.ui.tagsFrozen && $('subPanel').hidden) {
+          if (state.ui.issueTag) {
+            e.preventDefault();
+            state.ui.issueTag = null;
+            $('tagIssue').querySelectorAll('.chip').forEach((c) => c.classList.remove('is-selected'));
+            $('interventionRow').hidden = true;
+            $('interventionHint').textContent = "";
+            logEvent('tag_cleared', { kind: 'issue' });
+            return;
+          }
+          if (state.ui.riskTag) {
+            e.preventDefault();
+            state.ui.riskTag = null;
+            $('tagRisk').querySelectorAll('.chip').forEach((c) => c.classList.remove('is-selected'));
+            $('tagIssueRow').hidden = true;
+            $('interventionRow').hidden = true;
+            logEvent('tag_cleared', { kind: 'risk' });
+            return;
+          }
+        }
+      }
+      if (e.key === 'Enter') {
+        markKeyboard();
+        if (streaming) { e.preventDefault(); state.ui.finishStream(); return; }
+        if (pressEnter()) { e.preventDefault(); return; }
+      }
+      if (e.key === 'e' || e.key === 'E') {
+        markKeyboard();
+        const next = $('evidenceList').querySelector('.evidence-toggle[aria-expanded="false"]');
+        if (next) { e.preventDefault(); next.click(); return; }
+      }
+      if (e.key === 'o' || e.key === 'O') {
+        markKeyboard();
+        e.preventDefault();
+        openOracle();
+        return;
+      }
     }
     if (e.key === 'Escape') {
       if (!$('supportPanel').hidden) { closeSupport(); return; }

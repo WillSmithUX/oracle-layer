@@ -719,8 +719,16 @@ branching, the recovery loop, the release pause, the student replies.
 - Student and Oracle text may contain light markdown-style emphasis; render
   `*text*` as italic only. No HTML in content strings.
 - `localStorage` only for the end-of-shift export and (optional) resume.
-- Keyboard: Enter/Space activate focused buttons; Escape closes drawers;
-  `m` toggles the music.
+- Keyboard: the game is playable without a mouse. One rule carries it —
+  the digits address the row that is waiting: risk, then issue, then the
+  interventions, then a sub-panel's options. Send, Block and Verify still
+  have to be *held*, on the keyboard as on the mouse, because they still
+  commit; a tap does nothing. Backspace steps back a tag, Enter advances
+  the one obvious step (finishing a stream, Continue, the vignettes),
+  Escape backs out, `e` opens the next evidence section, `o` opens Oracle's
+  card, `m` toggles sound. Number badges on every control stay invisible
+  until the player touches the keyboard, then appear on every row at once,
+  which teaches the scheme without a word of instruction.
 - Never show the expert profile or fit scores in the UI.
 - Content authoring guideline: student replies ≤ 40 words; Oracle drafts
   60–110 words; Oracle margin lines ≤ 15 words; reason tags ≤ 8 words.

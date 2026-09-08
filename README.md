@@ -45,6 +45,13 @@ boot sequence runs; you can skip it. Then the console:
   comes back when the student replies. Browsers hold audio until you click
   something, so it fades in on your first interaction.
 
+You can play the whole thing from the keyboard. The digits pick from
+whichever row is waiting for you — risk, then issue, then the six
+interventions, then any options that open. Backspace steps back, Enter
+advances, `e` opens evidence, `o` opens Oracle, `m` toggles sound. Send,
+Block and Verify have to be held down, the same as with a mouse. Press any
+number and the controls show you their digits.
+
 For each draft, tag the **risk** and the **primary issue**, then choose an
 intervention:
 
