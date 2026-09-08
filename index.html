@@ -603,6 +603,7 @@
       </span>
     </div>
     <div class="header-right">
+      <button class="link-btn" type="button" id="soundBtn" aria-pressed="true">Sound on</button>
       <button class="link-btn" type="button" id="supportBtn" aria-haspopup="dialog">Support</button>
       <div class="oracle-glyph" id="oracleGlyph">
         <span class="glyph-label">ORACLE</span>
@@ -716,7 +717,20 @@
     GLYPH_DRAFT_MS: 1100,     // drafting pulse cycle
     GLYPH_FLASH_MS: 900,      // released / held one-shot
     GLYPH_SPEAK_MS: 650,      // speaking flare
-    TINT_MS: 1200             // relationship tint transition
+    TINT_MS: 1200,            // relationship tint transition
+    MUSIC_FADE_MS: 2400,      // music fading between contexts (boot → console → debrief)
+    MUSIC_DUCK_MS: 500,       // music falling away as a decision is released
+    MUSIC_RETURN_MS: 2000,    // music returning after the release pause
+    MUSIC_TAIL_MS: 9000       // the track's own fade-out; the next pass starts under it
+  };
+
+  // Music levels. A bed under the console, a little more on the screens
+  // where nothing else is happening. The track's own RMS is about -15 dBFS,
+  // so 0.11 puts the bed near -34 dBFS: present, never competing.
+  const MUSIC = {
+    src: "audio/the-oracles-quiet-watch.mp3",
+    screen: 0.18,
+    console: 0.11
   };
 
   // Bars move this many display points per raw meter unit. PLAN.md §5 says 5;
@@ -730,6 +744,7 @@
   const STORAGE_KEY = "oracle_layer_shift1";
   const STORAGE_RUNS = "oracle_layer_runs";
   const STORAGE_SESSION = "oracle_layer_session_no";
+  const STORAGE_SOUND = "oracle_layer_sound";
   const FIRST_SESSION_NO = 419;
 
   function sessionName(n) { return "L-" + String(n).padStart(4, "0"); }
@@ -1003,6 +1018,142 @@
 
   function disarmHesitation() {
     if (state.ui.hesitationTimer) { clearTimeout(state.ui.hesitationTimer); state.ui.hesitationTimer = null; }
+  }
+
+  // =====================================================================
+  // Music. One track, two elements. The file fades out over its last ten
+  // seconds, so the next pass starts underneath that tail rather than after
+  // a gap of silence. Level is a bed, never a score: the release pause ducks
+  // it to nothing, so the silence after a decision still lands — harder, if
+  // anything, for having had something to fall out of.
+  // =====================================================================
+  const music = {
+    els: [],
+    i: 0,
+    available: true,
+    on: true,
+    level: 0,          // what is playing now
+    context: MUSIC.screen, // what to return to after a duck
+    fade: null,
+    gestureArmed: false
+  };
+
+  function musicInit() {
+    music.on = readStore(STORAGE_SOUND, true) !== false;
+    const make = () => {
+      const a = new Audio(MUSIC.src);
+      a.preload = "auto";
+      a.volume = 0;
+      a.addEventListener('error', () => {
+        // No track on disk (or a codec the browser won't take): the game is
+        // silent and says so by dropping the control rather than lying.
+        music.available = false;
+        $('soundBtn').hidden = true;
+      });
+      a.addEventListener('timeupdate', () => musicAdvance(a));
+      return a;
+    };
+    music.els = [make(), make()];
+    renderSoundBtn();
+    armMusicGesture();
+  }
+
+  // Start the next pass under the tail of the current one.
+  function musicAdvance(a) {
+    if (a !== music.els[music.i] || a.paused) return;
+    if (!a.duration || !isFinite(a.duration)) return;
+    if (a.currentTime < a.duration - TIMING.MUSIC_TAIL_MS / 1000) return;
+    const previous = a;
+    music.i = 1 - music.i;
+    const next = music.els[music.i];
+    try { next.currentTime = 0; } catch (e) { /* not seekable yet */ }
+    next.volume = music.on ? music.level : 0;
+    musicPlay(next);
+    setTimeout(() => { previous.pause(); try { previous.currentTime = 0; } catch (e) {} }, TIMING.MUSIC_TAIL_MS + 1000);
+  }
+
+  function musicPlay(el) {
+    const a = el || music.els[music.i];
+    if (!music.available || !music.on || !a.paused) return;
+    const p = a.play();
+    // Autoplay is refused until the player interacts; the gesture listener
+    // below picks it up from there.
+    if (p && p.catch) p.catch(() => {});
+  }
+
+  function applyMusicVolume() {
+    const v = music.on ? clamp(music.level, 0, 1) : 0;
+    music.els.forEach((a) => { a.volume = v; });
+  }
+
+  function fadeMusicTo(level, ms) {
+    if (music.fade) { clearInterval(music.fade); music.fade = null; }
+    const from = music.level;
+    const steps = Math.max(1, Math.round((ms || 0) / 50));
+    let n = 0;
+    music.fade = setInterval(() => {
+      n += 1;
+      const t = Math.min(1, n / steps);
+      music.level = from + (level - from) * t;
+      applyMusicVolume();
+      if (t >= 1) { clearInterval(music.fade); music.fade = null; }
+    }, 50);
+  }
+
+  // The level for a context (boot / console / end screens). Remembered, so a
+  // duck knows what to come back to.
+  function setMusicLevel(level, ms) {
+    music.context = level;
+    musicPlay();
+    fadeMusicTo(level, ms == null ? TIMING.MUSIC_FADE_MS : ms);
+  }
+
+  function duckMusic() { fadeMusicTo(0, TIMING.MUSIC_DUCK_MS); }
+  function unduckMusic() { fadeMusicTo(music.context, TIMING.MUSIC_RETURN_MS); }
+
+  // Browsers refuse audio until the player has interacted with the page.
+  function armMusicGesture() {
+    if (music.gestureArmed) return;
+    music.gestureArmed = true;
+    const go = () => {
+      document.removeEventListener('pointerdown', go);
+      document.removeEventListener('keydown', go);
+      // Fade in from silence rather than arriving at full bed on a click.
+      const to = music.context;
+      music.level = 0;
+      applyMusicVolume();
+      musicPlay();
+      fadeMusicTo(to, TIMING.MUSIC_FADE_MS);
+    };
+    document.addEventListener('pointerdown', go);
+    document.addEventListener('keydown', go);
+  }
+
+  function renderSoundBtn() {
+    const btn = $('soundBtn');
+    const labels = (CONTENT.ui && CONTENT.ui.sound) || {};
+    btn.hidden = !music.available;
+    btn.textContent = music.on ? (labels.on || "Sound on") : (labels.off || "Sound off");
+    btn.setAttribute('aria-pressed', String(music.on));
+    btn.title = labels.title || "Music";
+  }
+
+  function toggleSound() {
+    if (!music.available) return;
+    music.on = !music.on;
+    writeStore(STORAGE_SOUND, music.on);
+    logEvent('sound_toggle', { on: music.on });
+    renderSoundBtn();
+    if (music.on) {
+      music.level = 0;
+      musicPlay();
+      fadeMusicTo(music.context, TIMING.MUSIC_RETURN_MS);
+    } else {
+      if (music.fade) { clearInterval(music.fade); music.fade = null; }
+      music.level = 0;
+      applyMusicVolume();
+      music.els.forEach((a) => a.pause());
+    }
   }
 
   // =====================================================================
@@ -1739,6 +1890,7 @@
     setOracleLine("");
     logEvent('release', { kind, option: ctx.optionLabel || null });
 
+    duckMusic();
     updateDraftBlock(kind, outcome);
     addSystemLine(outcome.systemLine || CONTENT.ui.systemLines[kind]);
     // Released brightens once; held / blocked / escalated dims once.
@@ -1793,6 +1945,7 @@
     }
 
     state.ui.lastKind = kind;
+    unduckMusic();
     await wait(TIMING.NEXT_TURN_DELAY_MS);
     if (stale(ep)) return;
     advance();
@@ -2192,6 +2345,7 @@
 
   function endShift() {
     state.ui.shiftEnded = true;
+    setMusicLevel(MUSIC.screen, TIMING.MUSIC_FADE_MS);
     disarmHesitation();
     if (state.ui.queueTimer) { clearTimeout(state.ui.queueTimer); state.ui.queueTimer = null; }
     logEvent('shift_end', { meters: Object.assign({}, state.meters) });
@@ -2424,6 +2578,7 @@
   function debugJump(caseIdx, turnIdx, flags, meters) {
     state.ui.epoch += 1;
     hideScreens();
+    setMusicLevel(MUSIC.console, TIMING.MUSIC_DUCK_MS);
     finishBoot(true);
     state.flags = flags;
     Object.assign(state.meters, meters);
@@ -2474,6 +2629,16 @@
     skipStream() { if (state.ui.finishStream) state.ui.finishStream(); },
     skipBoot() { finishBoot(); },
     tint() { return $('oracleGlyph').dataset.tint || 'balanced'; },
+    music() {
+      return {
+        available: music.available, on: music.on,
+        level: +music.level.toFixed(3), context: music.context,
+        playing: music.els.map((a) => !a.paused),
+        volumes: music.els.map((a) => +a.volume.toFixed(3))
+      };
+    },
+    toggleSound,
+    musicSeek(t) { const a = music.els[music.i]; if (a.duration) a.currentTime = Math.min(t, a.duration - 0.05); },
     glyphClasses() { return $('oracleGlyph').className; },
     queueCount() { return $('queueList').children.length; },
     leaks() { return [...state.ui.leaksFired]; },
@@ -2552,6 +2717,11 @@
       toggleDebugPanel();
       return;
     }
+    if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const t = e.target;
+      const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+      if (!typing) { e.preventDefault(); toggleSound(); return; }
+    }
     if (e.key === 'Escape') {
       if (!$('supportPanel').hidden) { closeSupport(); return; }
       if (!$('debugPanel').hidden) { $('debugPanel').hidden = true; return; }
@@ -2614,6 +2784,7 @@
     if (immediate) { b.remove(); return; }
     b.classList.add('is-fading');
     setTimeout(() => b.remove(), TIMING.BOOT_FADE_MS + 50);
+    setMusicLevel(MUSIC.console, TIMING.MUSIC_FADE_MS);
     startCase();
   }
 
@@ -2636,6 +2807,9 @@
     initSession();
     $('sessionId').textContent = "session " + state.session;
     renderSupportPanel();
+    musicInit();
+    $('soundBtn').addEventListener('click', toggleSound);
+    setMusicLevel(MUSIC.screen, TIMING.MUSIC_FADE_MS);
     renderMeters();
     renderQueue();
     watchConsoleHeight();

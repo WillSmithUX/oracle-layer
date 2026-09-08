@@ -268,10 +268,28 @@ expose `window.__oracleExport()` returning JSON. A hidden keyboard shortcut
 - Hesitation timer: 20s without action after a draft finishes → fire
   `on_hesitate` once per turn.
 
-### Sound (optional, last)
-Web Audio API, synthesized, no asset files: arrival chime (two soft tones),
-release thunk (low, short), meter tick, faint hum under the boot screen.
-Mute by default until the player clicks anywhere (browser autoplay rules).
+### Sound
+**Built (expansion pass):** one scored track, *The Oracle's Quiet Watch*
+(`audio/the-oracles-quiet-watch.mp3`, 2:53), rather than the synthesized
+chimes below. It plays as a bed, not a score:
+
+- Boot screen and the end-of-shift screens: level 0.18.
+- Under the console: level 0.11. The track's own RMS is about -15 dBFS, so
+  the bed sits near -34 dBFS.
+- **The release pause ducks it to silence** (500ms down, 2s back after the
+  student replies). The silence PLAN.md asks for after a release is still
+  silence, and the music falling away is what marks it.
+- The file fades out over its last ten seconds, so it does not `loop`:
+  two audio elements alternate and the next pass starts under the tail.
+- A **Sound on / Sound off** control sits in the header, `m` toggles it, and
+  the choice is remembered in `localStorage`. Nothing plays until the player
+  has interacted with the page (browser autoplay rules); the first click or
+  keypress fades it in. If the file is missing the control hides itself and
+  the game runs silent.
+
+*Original plan, not built:* Web Audio API, synthesized, no asset files:
+arrival chime (two soft tones), release thunk (low, short), meter tick,
+faint hum under the boot screen.
 
 ---
 
@@ -611,16 +629,18 @@ branching, the recovery loop, the release pause, the student replies.
 
 ## 10. Technical constraints and conventions
 
-- Vanilla HTML/CSS/JS. No frameworks, no bundler, no external assets except
-  fonts (self-host or system fallbacks; do not block on font loading).
-- Two files: `index.html`, `content.js`. Plus `/docs` (design PDFs) and
-  `README.md`.
+- Vanilla HTML/CSS/JS. No frameworks, no bundler; the only external assets
+  are fonts (self-host or system fallbacks; do not block on font loading)
+  and the music track (§5 Sound), which the game runs without.
+- Two files: `index.html`, `content.js`. Plus `audio/`, `/docs` (design PDFs)
+  and `README.md`.
 - All colors through CSS variables. All timing constants in one `TIMING`
   object at the top of the script.
 - Student and Oracle text may contain light markdown-style emphasis; render
   `*text*` as italic only. No HTML in content strings.
 - `localStorage` only for the end-of-shift export and (optional) resume.
-- Keyboard: Enter/Space activate focused buttons; Escape closes drawers.
+- Keyboard: Enter/Space activate focused buttons; Escape closes drawers;
+  `m` toggles the music.
 - Never show the expert profile or fit scores in the UI.
 - Content authoring guideline: student replies ≤ 40 words; Oracle drafts
   60–110 words; Oracle margin lines ≤ 15 words; reason tags ≤ 8 words.

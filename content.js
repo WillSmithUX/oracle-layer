@@ -476,6 +476,14 @@ const CONTENT = {
     ruleNotRecorded: "(no rule recorded)",
     closingLine: "Reliable guidance depends on knowing when to trust, when to question, and when to involve another person.",
 
+    // Header sound toggle. The music is a bed, not a score; the label says
+    // what the next click will do.
+    sound: {
+      on: "Sound on",
+      off: "Sound off",
+      title: "Music (m)"
+    },
+
     // Boot-screen content note. Plain, outside the fiction.
     contentNote: "This game includes a scenario involving academic and financial stress and a moment of emotional distress.",
 

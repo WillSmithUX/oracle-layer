@@ -35,6 +35,10 @@ boot sequence runs; you can skip it. Then the console:
   policy. Open what you need. Every open is logged.
 - **Meters** (right, bottom) — Calibrated Trust, Accuracy, Autonomy, Safety.
   Each decision moves them and says why.
+- **Sound** (header) — a quiet music bed, on by default and off in one click
+  (or press `m`). It drops to silence for the pause after each release and
+  comes back when the student replies. Browsers hold audio until you click
+  something, so it fades in on your first interaction.
 
 For each draft, tag the **risk** and the **primary issue**, then choose an
 intervention:
@@ -83,16 +87,20 @@ clearly marked as separate from the fiction.
 - `Ctrl+Shift+D` opens a debug panel that jumps to any turn with arbitrary
   flags and meter values, so specific branches can be reached without
   replaying.
+- `m` toggles the music without reaching for the header.
 
 ## Files
 
-Two files, no build step, no dependencies:
+Two files and one audio asset, no build step, no dependencies:
 
 - `index.html` — the engine and all styling. Timing constants live in one
   `TIMING` object; colors in CSS variables.
 - `content.js` — every line of copy: cases, drafts, student replies, Oracle's
   margin voice, evidence, log-line leaks, vignettes, debrief text. Writing a
   new case never touches the engine.
+- `audio/the-oracles-quiet-watch.mp3` — the music, *The Oracle's Quiet Watch*
+  (2:53). The only asset. Delete it and the game runs silent, with the sound
+  control hidden.
 
 Design documents:
 
