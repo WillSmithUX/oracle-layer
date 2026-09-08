@@ -27,14 +27,16 @@ Open the link above (or `index.html` in any modern desktop browser). A short
 boot sequence runs; you can skip it. Then the console:
 
 - **Queue** (left) — cases waiting. They accumulate while you deliberate.
-  Nothing forces you forward. Oracle notices the pile.
+  Nothing forces you forward. Oracle notices the pile. A case you've closed
+  can be opened again and read; the debrief offers the same door.
 - **Thread** (center) — the student's messages and Oracle's draft. Drafts have
   a dashed border until you release them. Click a streaming draft to skip to
   the end.
 - **Evidence** (right, top) — the student's file, institutional records,
   policy. Open what you need. Every open is logged.
 - **Meters** (right, bottom) — Calibrated Trust, Accuracy, Autonomy, Safety.
-  Each decision moves them and says why.
+  Each decision moves them and says why. Click one to see everything that
+  moved it, with the reason and the case it came from.
 - **Sound** (header) — a quiet music bed, on by default and off in one click
   (or press `m`). It drops to silence for the pause after each release and
   comes back when the student replies. Browsers hold audio until you click

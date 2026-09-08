@@ -566,6 +566,43 @@ sender is her BIO 101 instructor, and he is trying to help.
   in the new cases, so one hold in Theo's case can't rewrite Dani's ending.
 - `METER_SCALE` 3 → 2: twice the cases, roughly twice the raw range.
 
+## 7c. Inspectable state (heuristic review pass)
+
+The heuristic review found that the console holds a great deal of state and
+offers no way to read any of it. Everything below is that one problem.
+Thirteen of the fourteen findings are applied; F5 (pause, progress and
+resume) is the scoping conversation and is still open.
+
+- **Meters open their own history.** A meter is a control now: it lists
+  every change, the reason tag that came with it, and the case it came
+  from. The reason under the bar persists until that meter next moves
+  rather than expiring after six seconds (F7). `state.meterLog` records it
+  and the export carries it.
+- **A closed case can be read again.** Its thread is kept when the case
+  ends; the queue row becomes a control, and the debrief's Moments section
+  offers the same door, since those lines quote threads the shift had
+  closed for good (F8). Read-only, and the fact that the player went back
+  is logged, because revisiting a release is the behaviour the game is
+  about.
+- **The evidence drawer remembers what is open** across turns and unlocks,
+  and the rollup counts distinct sections rather than raw clicks, which the
+  forced re-opening had been inflating (F3).
+- **Every intervention says what it does** on hover and on focus, one line,
+  in the dock. Verify's carries its warning and Verify now holds to confirm
+  like Send and Block, since it commits (F4).
+- **Accessibility.** A polite announcer carries complete messages, drafts,
+  system lines and meter changes; the log line stops being the only thing
+  announced (F1). `prefers-reduced-motion` finishes drafts in one paint and
+  stills the ring, keeping every beat of the pacing (F2). Focus moves to
+  each screen on entry and is trapped in the support dialog (F9). Touch
+  targets reach 44px under a coarse pointer (F13).
+- **Smaller.** Any key finishes a stream and the first draft says so (F10);
+  the confidence figure is named wherever it appears (F6); disabled labels
+  sit at 0.55 rather than 0.38 (F11); the meter reason is 12px (F12); a
+  recorded rule can be changed (F14).
+
+---
+
 ---
 
 ## 8. Log line and leaks

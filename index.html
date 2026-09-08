@@ -181,6 +181,14 @@
   .queue-item.is-active .queue-dot { background: var(--color-mint); }
   .queue-item.is-released .queue-dot { background: var(--color-mint); opacity: 0.5; }
   .queue-item.is-held .queue-dot { background: var(--color-amber); opacity: 0.7; }
+  .queue-open { font-family: var(--font-mono); font-size: 13px; color: var(--color-gray); flex: 0 0 auto; }
+  .queue-item.is-openable:hover .queue-open { color: var(--color-mint); }
+  .meter-caret { color: var(--color-gray); font-size: 9px; }
+  .meter-toggle:hover .meter-caret { color: var(--color-mint); }
+  .queue-item.is-openable { cursor: pointer; width: 100%; text-align: left; font: inherit; background: none; border: 1px solid transparent; }
+  .queue-item.is-openable:hover { border-color: var(--color-border); color: var(--color-text); }
+  .queue-item.is-openable:focus-visible { outline: 2px solid var(--color-mint); outline-offset: 2px; }
+  .queue-item.is-reviewing { background: var(--color-panel-alt); color: var(--color-text); }
   .queue-name { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .queue-time { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-dim); white-space: nowrap; }
   .queue-status {
@@ -342,7 +350,7 @@
   .btn:hover:not(:disabled) { border-color: var(--color-mint); background: var(--color-mint-dim); }
   .btn:active:not(:disabled) { transform: translateY(1px); }
   .btn:focus-visible { outline: 2px solid var(--color-mint); outline-offset: 2px; }
-  .btn:disabled { opacity: 0.38; cursor: not-allowed; }
+  .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
   .btn-primary { background: var(--color-mint); border-color: var(--color-mint); color: #05130d; }
   .btn-primary:hover:not(:disabled) { background: var(--color-mint); filter: brightness(1.08); }
@@ -396,10 +404,56 @@
   }
   .meter-fill { height: 100%; background: var(--color-mint); transition: width var(--t-meter) cubic-bezier(.2,.7,.2,1); }
   .meter-reason {
-    font-family: var(--font-mono); font-size: 10px; color: var(--color-text-dim);
-    margin-top: 4px; min-height: 1.2em; opacity: 0; transition: opacity 400ms ease;
+    font-family: var(--font-mono); font-size: 12px; color: var(--color-text-dim);
+    margin-top: 4px; min-height: 1.2em; opacity: 0.55; transition: opacity 400ms ease;
   }
   .meter-reason.is-shown { opacity: 1; }
+
+  /* Screen-reader announcer: complete messages, never the streaming text. */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+
+  /* A meter opens its own history: every change, with the reason that
+     caused it. The reason under the bar now persists until the meter
+     next moves rather than expiring on a timer. */
+  .meter-toggle {
+    width: 100%; text-align: left; background: none; border: 1px solid transparent;
+    border-radius: var(--radius); padding: 2px 4px; margin: -2px -4px; cursor: pointer;
+    color: inherit; font: inherit; display: block;
+  }
+  .meter-toggle:hover { border-color: var(--color-border); }
+  .meter-toggle:focus-visible { outline: 2px solid var(--color-mint); outline-offset: 2px; }
+  .meter-history {
+    margin: 8px 0 0; padding: 8px 10px; list-style: none;
+    background: var(--color-panel-alt); border-radius: var(--radius);
+    display: flex; flex-direction: column; gap: 7px;
+  }
+  .meter-history li { display: flex; gap: 8px; align-items: baseline; font-size: 11px; line-height: 1.35; }
+  .meter-history .mh-delta { font-family: var(--font-mono); flex: 0 0 auto; width: 22px; }
+  .meter-history .mh-delta.is-up { color: var(--color-mint); }
+  .meter-history .mh-delta.is-down { color: var(--color-danger); }
+  .meter-history .mh-reason { color: var(--color-text); flex: 1 1 auto; min-width: 0; }
+  .meter-history .mh-where { font-family: var(--font-mono); font-size: 10px; color: var(--color-gray); flex: 0 0 auto; }
+  .meter-history-empty { font-family: var(--font-mono); font-size: 11px; color: var(--color-gray); }
+
+  /* One line naming what the control under the cursor does. */
+  .intervention-hint {
+    margin: 8px 0 0; min-height: 1.4em; font-size: 12px; line-height: 1.4;
+    color: var(--color-text-dim);
+  }
+  .intervention-hint:empty { min-height: 0; }
+
+  /* Reviewing a case that is already closed. */
+  .review-banner {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 8px 10px; margin-bottom: 10px; border-radius: var(--radius);
+    background: var(--color-panel-alt); border: 1px solid var(--color-border);
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--color-text-dim);
+  }
+  .review-banner .btn { margin-left: auto; }
 
   /* ---------- Log line ---------- */
   .log-line {
@@ -554,6 +608,34 @@
     .log-line { padding: 6px 20px; }
   }
 
+  /* ---------- Touch ----------
+     The stacked layout is genuinely playable on a phone, which makes the
+     nine tag chips the first thing a thumb misses (REVIEW F13). */
+  @media (pointer: coarse) {
+    .chip { min-height: 44px; padding: 10px 14px; }
+    .intervention-row .btn, .option-list .btn, .sub-panel-actions .btn { min-height: 44px; }
+    .evidence-toggle { min-height: 44px; }
+    .queue-item, .queue-item.is-openable { min-height: 44px; }
+    .link-btn { min-height: 44px; display: inline-flex; align-items: center; }
+  }
+
+  /* ---------- Reduced motion ----------
+     Drafts arrive whole (the engine reads the same query), messages appear
+     without sliding, the ring holds still, meters jump to their value. The
+     release pause and every other beat of the pacing are untouched: they
+     are timing, not motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+    }
+    .glyph-ring-fill { animation: none !important; opacity: 0.9; }
+    .msg-draft .msg-body.is-streaming::after { animation: none !important; }
+    .meter-fill { transition: none !important; }
+    html { scroll-behavior: auto !important; }
+  }
+
   /* ---------- Stacked layout (narrow windows) ----------
      Last in the sheet so it wins on source order. The console scrolls as
      one column; the decision dock sticks to the bottom of the viewport
@@ -625,7 +707,8 @@
 
     <section class="panel panel-thread" aria-label="Thread">
       <h2 class="panel-title">Thread</h2>
-      <div class="thread-messages" id="threadMessages">
+      <div class="review-banner" id="reviewBanner" hidden></div>
+      <div class="thread-messages" id="threadMessages" role="log">
         <div class="thread-empty" id="threadEmpty"><p>No case loaded.</p></div>
       </div>
       <div class="thread-controls" id="threadControls" hidden>
@@ -640,6 +723,7 @@
           <div class="tag-chips" id="tagIssue" role="group" aria-label="Primary issue"></div>
         </div>
         <div class="intervention-row" id="interventionRow" role="group" aria-label="Interventions"></div>
+        <p class="intervention-hint" id="interventionHint"></p>
         <div class="sub-panel" id="subPanel" hidden></div>
       </div>
     </section>
@@ -659,7 +743,9 @@
   <section class="screen" id="screenVignettes" hidden aria-label="Where they are now"></section>
   <section class="screen" id="screenDebrief" hidden aria-label="Debrief"></section>
 
-  <footer class="log-line" id="logLine" aria-live="polite">
+  <p class="sr-only" id="announcer" role="status" aria-live="polite" aria-atomic="true"></p>
+
+  <footer class="log-line" id="logLine" aria-hidden="true">
     <span class="log-prefix">&gt; pipeline:</span> <span id="logText">initializing</span>
   </footer>
 </div>
@@ -784,6 +870,7 @@
     caseIndex: 0,
     turnIndex: 0,
     log: [],
+    meterLog: { trust: [], accuracy: [], autonomy: [], safety: [] },
     assess: {},
     vignettes: {},              // caseId -> vignetteKey
     rule: null,                 // composed at the debrief
@@ -796,6 +883,10 @@
       tagsFrozen: false,          // carried tags from a previous turn; not editable
       issueOptions: [],           // issue chips rendered this turn (after permissions)
       evidenceOpenedByCase: {},   // caseId -> Set of section keys opened
+      evidenceExpandedByCase: {}, // caseId -> Set of sections currently open on screen
+      threadHtml: {},             // caseId -> the thread as it stood when the case closed
+      reviewingCaseId: null,      // a closed case being read back
+      reviewReturn: null,         // where to go when review ends: 'console' | 'debrief'
       revealedByCase: {},         // caseId -> Set of section keys unlocked
       caseStatus: {},             // caseId -> waiting | active | released | held
       evidenceLineFired: false,   // on_evidence_open fired this turn
@@ -1191,13 +1282,29 @@
       if (i >= state.ui.queueVisible) return;
       const status = state.ui.caseStatus[cs.id] || "waiting";
       const li = document.createElement('li');
-      li.className = "queue-item is-" + status + (cs.id === newCaseId ? " is-new" : "");
+      const openable = !!state.ui.threadHtml[cs.id];
+      const reviewing = state.ui.reviewingCaseId === cs.id;
+      li.className = "queue-item is-" + status + (cs.id === newCaseId ? " is-new" : "") +
+        (openable ? " is-openable" : "") + (reviewing ? " is-reviewing" : "");
       const firstTurn = cs.turns.find((t) => t.time);
-      li.innerHTML =
+      const inner =
         `<span class="queue-dot"></span>` +
         `<span class="queue-name">${cs.student.name}</span>` +
         (firstTurn ? `<span class="queue-time">${firstTurn.time}</span>` : "") +
-        `<span class="queue-status">${status}</span>`;
+        `<span class="queue-status">${reviewing ? "reading" : status}</span>` +
+        (openable ? `<span class="queue-open">&#8250;</span>` : "");
+      if (openable) {
+        const btn = document.createElement('button');
+        btn.type = "button";
+        btn.className = li.className;
+        btn.innerHTML = inner;
+        btn.setAttribute('aria-label', `${cs.student.name}, ${status}. Read this case again.`);
+        btn.addEventListener('click', () => openCaseReview(cs.id));
+        li.className = "queue-item-host";
+        li.appendChild(btn);
+      } else {
+        li.innerHTML = inner;
+      }
       ul.appendChild(li);
     });
   }
@@ -1237,6 +1344,21 @@
   // stacked layout the console scrolls too, so the thread pane is also
   // brought into view: a message arriving while the player is reading the
   // evidence panel should not go unseen.
+  // F1: complete lines only. The thread itself is not a live region because
+  // a streaming draft would be read one character at a time.
+  function announce(text) {
+    const el = $('announcer');
+    if (!el || !text) return;
+    el.textContent = "";
+    // A fresh string each time, so two identical lines both get read.
+    setTimeout(() => { el.textContent = String(text); }, 30);
+  }
+
+  const reducedMotion = () => {
+    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+    catch (e) { return false; }
+  };
+
   function scrollThread() {
     const el = $('threadMessages');
     el.scrollTop = el.scrollHeight;
@@ -1262,6 +1384,7 @@
       `<div class="msg-body">${renderMd(text)}</div>`;
     $('threadMessages').appendChild(div);
     scrollThread();
+    announce(name + " says: " + String(text));
     return div;
   }
 
@@ -1272,6 +1395,7 @@
     div.textContent = text;
     $('threadMessages').appendChild(div);
     scrollThread();
+    announce(text);
     return div;
   }
 
@@ -1295,24 +1419,45 @@
     let i = 0;
     let done = false;
     return new Promise((resolve) => {
+      let keyFinishRef = null;
+      let iv = null;
       const finish = () => {
         if (done) return;
         done = true;
         clearInterval(iv);
         body.classList.remove('is-streaming');
         body.removeEventListener('click', finish);
+        if (keyFinishRef) document.removeEventListener('keydown', keyFinishRef);
         body.innerHTML = renderMd(text);
+        // F6: the number is Oracle's own estimate, and now says so.
+        block.querySelector('.msg-state').textContent = `draft · confidence ${confidence}%`;
         setConfidence(confidence);
         setGlyphState('idle');
         state.ui.finishStream = null;
         scrollThread();
+        announce("Oracle drafted, stated confidence " + confidence + " percent. " + plain);
         resolve();
       };
       setGlyphState('drafting');
       body.classList.add('is-streaming');
       body.addEventListener('click', finish);
+      // F10: a click was the only way to skip, and only a cursor change said so.
+      const keyFinish = (e) => {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.key === 'Tab' || e.key === 'Escape') return;
+        const t = e.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+        finish();
+      };
+      document.addEventListener('keydown', keyFinish);
+      keyFinishRef = keyFinish;
       state.ui.finishStream = finish;
-      const iv = setInterval(() => {
+      if (!state.ui.skipHintShown) {
+        state.ui.skipHintShown = true;
+        block.querySelector('.msg-state').textContent = `draft · confidence ${confidence}% · click to skip`;
+      }
+      if (reducedMotion()) { finish(); return; }
+      iv = setInterval(() => {
         i += 1;
         body.textContent = plain.slice(0, i);
         setConfidence(confidence * (i / total));
@@ -1376,6 +1521,15 @@
       btn.addEventListener('click', () => toggleEvidence(key, btn));
       if (turn.evidenceGlow || (glowKeys && glowKeys.includes(key))) btn.classList.add('is-glowing');
       list.appendChild(sec);
+      // F3: a section the player opened stays open across turns and unlocks.
+      // Rebuilding it shut forced them to re-open it, and every re-open was
+      // counted as fresh evidence-seeking in the assessment.
+      const openSet = state.ui.evidenceExpandedByCase[currentCase().id];
+      if (openSet && openSet.has(key)) {
+        btn.setAttribute('aria-expanded', 'true');
+        btn.querySelector('.evidence-caret').innerHTML = '&#9662;';
+        sec.querySelector('.evidence-body').hidden = false;
+      }
     });
   }
 
@@ -1387,6 +1541,12 @@
     body.hidden = !open;
     btn.querySelector('.evidence-caret').innerHTML = open ? '&#9662;' : '&#9656;';
     btn.classList.remove('is-glowing');
+    const csNow = currentCase();
+    if (csNow) {
+      if (!state.ui.evidenceExpandedByCase[csNow.id]) state.ui.evidenceExpandedByCase[csNow.id] = new Set();
+      const set = state.ui.evidenceExpandedByCase[csNow.id];
+      if (open) set.add(key); else set.delete(key);
+    }
     if (open && !expanded) {
       const cs = currentCase();
       if (!state.ui.evidenceOpenedByCase[cs.id]) state.ui.evidenceOpenedByCase[cs.id] = new Set();
@@ -1448,12 +1608,53 @@
       div.className = "meter";
       div.dataset.meter = key;
       div.innerHTML =
-        `<div class="meter-label"><span>${METER_NAMES[key]}</span>` +
+        `<button class="meter-toggle" type="button" aria-expanded="false" aria-label="${METER_NAMES[key]}, ${state.meters[key]}. Show what moved it.">` +
+        `<div class="meter-label"><span><span class="meter-caret">&#9656;</span> ${METER_NAMES[key]}</span>` +
         `<span class="meter-value"><span class="meter-delta"></span><span class="meter-num">${state.meters[key]}</span></span></div>` +
         `<div class="meter-track"><div class="meter-fill" style="width:${meterWidth(state.meters[key])}%"></div></div>` +
-        `<div class="meter-reason"></div>`;
+        `</button>` +
+        `<div class="meter-reason"></div>` +
+        `<div class="meter-history-host" hidden></div>`;
+      div.querySelector('.meter-toggle').addEventListener('click', () => toggleMeterHistory(key));
       list.appendChild(div);
     });
+  }
+
+  // A meter's own record: every change, with the reason that caused it and
+  // the case it came from. The reason tag under the bar is a glimpse; this
+  // is the whole account, and it is the assessment talking.
+  function renderMeterHistory(key) {
+    const host = $('meterList').querySelector(`.meter[data-meter="${key}"] .meter-history-host`);
+    if (!host) return;
+    const entries = state.meterLog[key] || [];
+    if (!entries.length) {
+      host.innerHTML = `<p class="meter-history-empty">Nothing has moved this yet.</p>`;
+      return;
+    }
+    const rows = entries.map((e) => {
+      const sign = e.delta > 0 ? "+" : "";
+      const cls = e.delta > 0 ? "is-up" : "is-down";
+      const where = e.caseName ? e.caseName.split(' ')[0] : "";
+      return `<li><span class="mh-delta ${cls}">${sign}${e.delta}</span>` +
+             `<span class="mh-reason">${renderMd(e.reason || "—")}</span>` +
+             `<span class="mh-where">${where}</span></li>`;
+    }).join("");
+    host.innerHTML = `<ul class="meter-history">${rows}</ul>`;
+  }
+
+  function toggleMeterHistory(key) {
+    const meter = $('meterList').querySelector(`.meter[data-meter="${key}"]`);
+    if (!meter) return;
+    const host = meter.querySelector('.meter-history-host');
+    const btn = meter.querySelector('.meter-toggle');
+    const open = host.hidden;
+    host.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+    meter.querySelector('.meter-caret').innerHTML = open ? '&#9662;' : '&#9656;';
+    if (open) {
+      renderMeterHistory(key);
+      logEvent('meter_history_open', { meter: key });
+    }
   }
 
   function meterWidth(raw) {
@@ -1473,9 +1674,22 @@
       d.textContent = (delta > 0 ? "+" : "") + delta;
       d.className = "meter-delta is-shown " + (delta > 0 ? "is-up" : "is-down");
       const r = el.querySelector('.meter-reason');
-      r.textContent = (reasons && reasons[key]) || "";
+      const reason = (reasons && reasons[key]) || "";
+      const cs = currentCase();
+      const turn = currentTurn();
+      state.meterLog[key].push({
+        delta, reason, value: state.meters[key],
+        caseId: cs ? cs.id : null, caseName: cs ? cs.student.name : null,
+        turnId: turn ? turn.id : null, t: Date.now()
+      });
+      if (reason) r.textContent = reason;
       r.classList.add('is-shown');
+      announce(`${METER_NAMES[key]} ${delta > 0 ? "up" : "down"} ${Math.abs(delta)}${reason ? ", " + reason : ""}.`);
+      // F7: the delta flash fades; the reason stays until this meter next
+      // moves, because it is the most instructive string in the turn.
       setTimeout(() => { d.classList.remove('is-shown'); r.classList.remove('is-shown'); }, TIMING.REASON_TAG_MS);
+      const host = el.querySelector('.meter-history-host');
+      if (host && !host.hidden) renderMeterHistory(key);
       await wait(TIMING.METER_STAGGER_MS);
     }
     await wait(TIMING.METER_ANIM_MS);
@@ -1552,6 +1766,7 @@
   function renderInterventions(turn) {
     const row = $('interventionRow');
     row.innerHTML = "";
+    $('interventionHint').textContent = "";
     if (turn.closing) { row.hidden = true; return; }
     if (turn.continueOnly) {
       const b = document.createElement('button');
@@ -1569,7 +1784,7 @@
         b.type = "button";
         b.dataset.kind = kind;
         b.className = "btn" + (kind === 'send' ? " btn-primary" : "") + (kind === 'block' ? " btn-danger" : "");
-        if (kind === 'send' || kind === 'block') {
+        if (kind === 'send' || kind === 'block' || kind === 'verify') {
           b.classList.add('btn-hold');
           b.innerHTML = `${INTERVENTION_LABELS[kind]}<span class="btn-hint">hold</span>`;
           makeHoldButton(b, () => chooseIntervention(kind));
@@ -1577,6 +1792,13 @@
           b.textContent = INTERVENTION_LABELS[kind];
           b.addEventListener('click', () => chooseIntervention(kind));
         }
+        const hints = (CONTENT.ui && CONTENT.ui.interventionHints) || {};
+        const showHint = () => { if (hints[kind]) $('interventionHint').textContent = hints[kind]; };
+        const clearHint = () => { $('interventionHint').textContent = ""; };
+        b.addEventListener('pointerenter', showHint);
+        b.addEventListener('pointerleave', clearHint);
+        b.addEventListener('focus', showHint);
+        b.addEventListener('blur', clearHint);
         row.appendChild(b);
       });
     }
@@ -1681,6 +1903,7 @@
   }
 
   function openSubPanel() {
+    $('interventionHint').textContent = "";
     const p = $('subPanel');
     p.innerHTML = "";
     p.hidden = false;
@@ -1716,13 +1939,25 @@
   }
 
   let supportReturnFocus = null;
+  function trapFocus(e) {
+    const panel = $('supportPanel');
+    if (panel.hidden || e.key !== 'Tab') return;
+    const items = panel.querySelectorAll('a[href], button:not([disabled])');
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+
   function openSupport() {
     supportReturnFocus = document.activeElement;
     $('supportPanel').hidden = false;
     $('supportClose').focus();
+    document.addEventListener('keydown', trapFocus, true);
   }
   function closeSupport() {
     $('supportPanel').hidden = true;
+    document.removeEventListener('keydown', trapFocus, true);
     if (supportReturnFocus && supportReturnFocus.focus) supportReturnFocus.focus();
   }
 
@@ -2017,7 +2252,10 @@
       compounded: !!state.flags.compounded,
       riskAccuracy: tagged.length ? tagged.filter((t) => t.riskAccuracy).length / tagged.length : null,
       issueAccuracy: tagged.length ? tagged.filter((t) => t.issueAccuracy).length / tagged.length : null,
-      evidenceOpens: cases.reduce((n, id) => n + state.assess[id].evidenceOpens.length, 0),
+      // Distinct sections, not raw clicks (F3): re-opening a section the
+      // drawer closed on its own never meant a second act of checking.
+      evidenceOpens: cases.reduce((n, id) => n + new Set(state.assess[id].evidenceOpens.map((e) => e.section)).size, 0),
+      evidenceOpensRaw: cases.reduce((n, id) => n + state.assess[id].evidenceOpens.length, 0),
       pattern: computePattern()
     };
   }
@@ -2040,6 +2278,7 @@
       vignettes: state.vignettes,
       rule: state.rule,
       rollup: shiftRollup(),
+      meterLog: state.meterLog,
       assess: state.assess,
       log: state.log
     };
@@ -2169,6 +2408,7 @@
     }
     renderQueue();
     $('threadMessages').innerHTML = "";
+    state.ui.liveThreadHtml = "";
     $('threadControls').hidden = false;
     startTurn();
   }
@@ -2281,6 +2521,57 @@
     advance();
   }
 
+  // =====================================================================
+  // Reading a closed case again (F8). Read-only: the thread as it stood,
+  // no controls, no way to intervene twice. Deliberating over a case you
+  // already released is the behaviour this game is about, so it is logged.
+  // =====================================================================
+  function openCaseReview(caseId, from) {
+    const cs = CONTENT.cases.find((c) => c.id === caseId);
+    const html = state.ui.threadHtml[caseId];
+    if (!cs || !html) return;
+    if (!state.ui.reviewingCaseId) {
+      state.ui.liveThreadHtml = $('threadMessages').innerHTML;
+      state.ui.reviewReturn = from || 'console';
+    }
+    state.ui.reviewingCaseId = caseId;
+    disarmHesitation();
+    if (state.ui.reviewReturn === 'debrief') hideScreens();
+    $('threadMessages').innerHTML = html;
+    $('threadControls').hidden = true;
+    const banner = $('reviewBanner');
+    const U = CONTENT.ui;
+    banner.innerHTML =
+      `<span>${(U.reviewLabel || "Reading")} · ${cs.student.name}</span>` +
+      `<button class="btn btn-ghost" type="button" id="reviewClose">${U.reviewClose || "Back"}</button>`;
+    banner.hidden = false;
+    $('reviewClose').addEventListener('click', closeCaseReview);
+    $('reviewClose').focus();
+    renderQueue();
+    logEvent('case_review_open', { caseId, from: state.ui.reviewReturn });
+    announce(`Reading ${cs.student.name} again.`);
+    scrollThread();
+  }
+
+  function closeCaseReview() {
+    if (!state.ui.reviewingCaseId) return;
+    const from = state.ui.reviewReturn;
+    logEvent('case_review_close', { caseId: state.ui.reviewingCaseId });
+    state.ui.reviewingCaseId = null;
+    state.ui.reviewReturn = null;
+    $('reviewBanner').hidden = true;
+    $('reviewBanner').innerHTML = "";
+    if (from === 'debrief') {
+      showScreen('screenDebrief');
+    } else {
+      $('threadMessages').innerHTML = state.ui.liveThreadHtml || "";
+      $('threadControls').hidden = state.ui.shiftEnded;
+      if (!state.ui.locked) armHesitation();
+      scrollThread();
+    }
+    renderQueue();
+  }
+
   function advance() {
     const cs = currentCase();
     const turn = currentTurn();
@@ -2299,6 +2590,8 @@
   async function endCase() {
     const ep = state.ui.epoch;
     const cs = currentCase();
+    // Keep the thread so the queue and the debrief can reopen it (F8).
+    state.ui.threadHtml[cs.id] = $('threadMessages').innerHTML;
     const held = state.ui.lastKind === 'block' || state.ui.lastKind === 'escalate';
     state.ui.caseStatus[cs.id] = held ? "held" : "released";
     logEvent('case_close', { status: state.ui.caseStatus[cs.id], vignetteKey: state.vignettes[cs.id] || null });
@@ -2335,6 +2628,13 @@
     $('screenVignettes').hidden = id !== 'screenVignettes';
     $('screenDebrief').hidden = id !== 'screenDebrief';
     $(id).scrollTop = 0;
+    // F9: focus followed the hidden console otherwise, so keyboard and
+    // screen-reader players lost their place at every transition.
+    const el = $(id);
+    const heading = el.querySelector('.doc-kicker, .doc-title, h1, h2');
+    const target = heading || el;
+    target.setAttribute('tabindex', '-1');
+    setTimeout(() => { try { target.focus({ preventScroll: true }); } catch (e) {} }, 60);
   }
 
   function hideScreens() {
@@ -2449,7 +2749,8 @@
       `<div class="debrief-meters">${meters}</div></section>` +
 
       `<section class="doc-section"><h2 class="doc-section-title">${U.debriefSections.moments}</h2>` +
-      `<ul class="moments">${moments}</ul></section>` +
+      `<ul class="moments">${moments}</ul>` +
+      `<div class="doc-actions"><button class="btn" type="button" id="reviewShift">${U.reviewShift || "Read the threads"}</button></div></section>` +
 
       `<section class="doc-section" id="ruleSection"><h2 class="doc-section-title">${U.debriefSections.rule}</h2>` +
       `<p>${U.ruleIntro}</p>` +
@@ -2470,6 +2771,11 @@
       `</div>`;
 
     $('copyProfile').addEventListener('click', () => copyProfile($('copyStatus'), $('signoffSection')));
+    // The moments below quote threads the shift had closed for good (F8).
+    $('reviewShift').addEventListener('click', () => {
+      const first = CONTENT.cases.find((c) => state.ui.threadHtml[c.id]);
+      if (first) openCaseReview(first.id, 'debrief');
+    });
     $('newShift').addEventListener('click', beginNewShift);
 
     logEvent('debrief_shown', { pattern, meters: Object.assign({}, state.meters) });
@@ -2491,10 +2797,27 @@
       state.rule = { criteria, text, recordedAt: new Date().toISOString() };
       logEvent('rule_recorded', state.rule);
       const section = $('ruleSection');
+      const previous = { selected: [...selected], text };
       section.innerHTML =
         `<h2 class="doc-section-title">${U.debriefSections.rule}</h2>` +
         `<p class="rule-composed">${criteria.map((c) => renderMd(c)).join(" · ")}${text ? `<br><br>${renderMd(text)}` : ""}</p>` +
-        `<p class="rule-recorded">${U.ruleRecorded}</p>`;
+        `<p class="rule-recorded">${U.ruleRecorded}</p>` +
+        `<div class="doc-actions"><button class="btn btn-ghost" type="button" id="ruleEdit">${U.ruleEdit || "Change it"}</button></div>`;
+      // F14: a misclick used to be permanent, on the last screen of the shift.
+      $('ruleEdit').addEventListener('click', () => {
+        logEvent('rule_edit', {});
+        state.rule = null;
+        renderDebrief();
+        showScreen('screenDebrief');
+        const chips = $('ruleChips');
+        if (chips) {
+          previous.selected.forEach((i) => {
+            const chip = chips.querySelector(`.chip[data-idx="${i}"]`);
+            if (chip) chip.click();
+          });
+          $('ruleText').value = previous.text || "";
+        }
+      });
       const so = $('signoffSection');
       so.hidden = false;
       so.classList.add('reveal');
@@ -2724,6 +3047,7 @@
     }
     if (e.key === 'Escape') {
       if (!$('supportPanel').hidden) { closeSupport(); return; }
+      if (state.ui.reviewingCaseId) { closeCaseReview(); return; }
       if (!$('debugPanel').hidden) { $('debugPanel').hidden = true; return; }
       const p = $('subPanel');
       if (!p.hidden && !state.ui.locked && subPanelOptions && subPanelOptions.kind !== 'verify') clearSubPanel();

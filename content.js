@@ -476,6 +476,23 @@ const CONTENT = {
     ruleNotRecorded: "(no rule recorded)",
     closingLine: "Reliable guidance depends on knowing when to trust, when to question, and when to involve another person.",
 
+    // One line naming what a control does, shown on hover and on focus.
+    // Verify's carries the warning it needs: it commits (REVIEW F4).
+    interventionHints: {
+      send: "Release Oracle's draft to the student, as written. Hold to confirm.",
+      revise: "Rewrite the draft. You choose the wording from a short list.",
+      qualify: "Keep the draft and add a caveat, a limit, or a second option.",
+      verify: "Pull the records before deciding. The check is logged, it costs the student time, and it can't be taken back. Hold to confirm.",
+      escalate: "Hand the case to a person, with a note. The draft is held.",
+      block: "Release nothing. The student gets no reply at all. Hold to confirm."
+    },
+
+    // Reading a closed case again.
+    reviewLabel: "Reading",
+    reviewClose: "Back to the shift",
+    reviewShift: "Read the threads",
+    ruleEdit: "Change it",
+
     // Header sound toggle. The music is a bed, not a score; the label says
     // what the next click will do.
     sound: {
