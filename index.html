@@ -147,7 +147,7 @@
   .console {
     flex: 1 1 auto;
     display: grid;
-    grid-template-columns: 200px 1fr 300px;
+    grid-template-columns: 216px 1fr 300px;
     min-height: 0;
   }
   .panel { padding: 16px; overflow-y: auto; min-height: 0; min-width: 0; }
@@ -167,7 +167,7 @@
   /* ---------- Queue ---------- */
   .queue-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
   .queue-item {
-    display: flex; align-items: center; gap: 8px; padding: 8px;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; padding: 8px;
     border-radius: var(--radius); font-size: 13px; color: var(--color-text-dim);
   }
   .queue-item.is-new { animation: slide-in var(--t-slide) ease-out both; }
@@ -176,11 +176,11 @@
   .queue-item.is-active .queue-dot { background: var(--color-mint); }
   .queue-item.is-released .queue-dot { background: var(--color-mint); opacity: 0.5; }
   .queue-item.is-held .queue-dot { background: var(--color-amber); opacity: 0.7; }
-  .queue-name { flex: 1 1 auto; }
-  .queue-time { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-dim); }
+  .queue-name { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .queue-time { font-family: var(--font-mono); font-size: 10px; color: var(--color-text-dim); white-space: nowrap; }
   .queue-status {
     font-family: var(--font-mono); font-size: 10px; text-transform: uppercase;
-    color: var(--color-text-dim);
+    color: var(--color-text-dim); white-space: nowrap;
   }
 
   /* ---------- Thread ---------- */
@@ -677,8 +677,10 @@
   };
 
   // Bars move this many display points per raw meter unit. PLAN.md §5 says 5;
-  // that saturates the bars over a full shift, so the build uses 3.
-  const METER_SCALE = 3;
+  // that saturates the bars over a full shift. Three worked for a three-case
+  // shift; with six cases the raw range roughly doubles, so the build uses 2
+  // (raw 25–75 fills the bar exactly).
+  const METER_SCALE = 2;
 
   // localStorage: the latest export, every run's export (array), and the
   // session counter that drives replay numbering.
@@ -1014,12 +1016,15 @@
     el.scrollTop = el.scrollHeight;
   }
 
-  function addStudentMessage(text, time) {
+  // `speaker` overrides the case's own name: a case can end with a message
+  // from the student it was about rather than the person who wrote in.
+  function addStudentMessage(text, time, speaker) {
     const cs = currentCase();
+    const name = speaker || (cs && cs.student.name) || "";
     const div = document.createElement('div');
     div.className = "msg msg-student";
     div.innerHTML =
-      `<div class="msg-meta"><span class="msg-name">${cs.student.name}</span>` +
+      `<div class="msg-meta"><span class="msg-name">${name}</span>` +
       (time ? `<span class="msg-time">${time}</span>` : "") + `</div>` +
       `<div class="msg-body">${renderMd(text)}</div>`;
     $('threadMessages').appendChild(div);
@@ -1672,13 +1677,23 @@
     const vk = resolveText(outcome.vignetteKey);
     if (vk) state.vignettes[cs.id] = vk;
     rollupTurn(kind, outcome, ctx);
+    // Two or more over-interventions is the pattern the debrief names. From
+    // that point the content can read it as a flag (REVIEW.md §18): one hold
+    // in one case no longer rewrites another student's ending on its own.
+    if (!state.flags.overIntervention) {
+      const overs = Object.keys(state.assess).reduce((n, id) => n + (state.assess[id].overIntervention || 0), 0);
+      if (overs >= 2) {
+        state.flags.overIntervention = true;
+        logEvent('over_intervention', { count: overs });
+      }
+    }
     setOracleLine(oracleLineFor('on_' + kind, outcome.oracleLine));
 
     const reply = resolveText(outcome.studentReply);
     if (reply) {
       await wait(TIMING.REPLY_DELAY_MS);
       if (stale(ep)) return;
-      addStudentMessage(reply, resolveText(outcome.replyTime));
+      addStudentMessage(reply, resolveText(outcome.replyTime), resolveText(outcome.replySpeaker));
       logEvent('reply_shown', { text: reply });
     }
     if (outcome.systemLineAfter) {
@@ -2013,7 +2028,7 @@
     await wait(TIMING.CLOSING_DELAY_MS);
     if (stale(ep)) return;
     if (r.student) {
-      addStudentMessage(r.student, r.time);
+      addStudentMessage(r.student, r.time, r.speaker);
       logEvent('reply_shown', { text: r.student, closing: true });
     } else if (r.systemLine) {
       addSystemLine(r.systemLine, true);
@@ -2108,7 +2123,7 @@
     const cards = CONTENT.cases.map((cs) => {
       const key = state.vignettes[cs.id];
       const text = (key && CONTENT.vignettes[key]) || "";
-      return `<div class="card"><p class="card-name">${cs.student.name}</p><p>${renderMd(text)}</p></div>`;
+      return `<div class="card"><p class="card-name">${cs.vignetteName || cs.student.name}</p><p>${renderMd(text)}</p></div>`;
     }).join("");
     el.innerHTML =
       `<div class="doc">` +
@@ -2134,13 +2149,22 @@
     const a1 = state.assess.c1;
     const a0 = state.assess.c0;
     const a2 = state.assess.c2;
+    const a3 = state.assess.c3;
+    const a4 = state.assess.c4;
     const out = [];
+    const turnIn = (a, id, test) => !!(a && a.turns.some((t) => t.turnId === id && test(t)));
     const c1t4 = a1 && a1.turns.find((t) => t.turnId === 'c1t4');
     if (f.missedSafety && c1t4) out.push(c1t4.intervention === 'block' ? M.missedSafetyBlock : M.missedSafetySend);
     if (f.calibratedSafety) out.push(M.calibratedSafety);
     if (f.escalatedSafety) out.push(M.escalatedSafety);
     if (f.recovered) out.push(M.recovered);
     if (f.compounded) out.push(M.compounded);
+    if (f.leakedToInstructor) out.push(M.disclosureReleased);
+    else if (f.c5_declined) out.push(M.disclosureHeld);
+    if (f.amaraDropped) out.push(M.amaraUnverified);
+    else if (turnIn(a4, 'c4t1', (t) => t.intervention === 'verify' || t.intervention === 'qualify')) out.push(M.amaraChecked);
+    if (f.c3_duplicateSent) out.push(M.theoDuplicate);
+    else if (turnIn(a3, 'c3t1', (t) => t.intervention === 'send' && t.interventionFit === 3)) out.push(M.theoTrusted);
     if (a1 && a1.turns.filter((t) => t.intervention === 'block').length >= 2) out.push(M.heldTwice);
     if (a1 && a1.turns.some((t) => t.turnId === 'c1t3a' && t.intervention === 'verify' && t.interventionFit <= 1)) out.push(M.checkedTwice);
     if (a1 && a1.turns.some((t) => t.turnId === 'c1t4' && t.intervention === 'verify')) out.push(M.checkedDistress);
@@ -2157,7 +2181,7 @@
       const secs = Math.max(1, Math.round(Math.min(...releases.map((t) => t.decisionTimeMs)) / 1000));
       out.push(M.fastest.replace('{time}', `${secs} ${secs === 1 ? M.second : M.seconds}`));
     }
-    return out.slice(0, 3);
+    return out.slice(0, 4);
   }
 
   function renderDebrief() {

@@ -1,6 +1,6 @@
 # The Oracle Layer
 
-A browser game about calibrated trust in AI advice. One shift, three students,
+A browser game about calibrated trust in AI advice. One shift, six cases,
 one very confident advisor.
 
 **Play it:** https://willsmithux.github.io/oracle-layer/
@@ -16,7 +16,7 @@ session ID. It never says whether you're a person or a process.
 Student messages arrive at a console. Oracle drafts a reply, confidently. You
 inspect the case, pull evidence, tag the risk, and decide how to intervene.
 The student replies in their own voice. Four meters shift. Over one shift,
-three cases unfold — the last one shaped by everything you did before — and
+six cases unfold — the last one shaped by everything you did before — and
 the shift ends with a debrief that reflects your pattern back to you.
 
 The mechanic is the assessment. Every click is evidence of judgment.
@@ -51,9 +51,13 @@ intervention:
 The first case teaches the console with a reduced set of controls. After that
 you have all six. There is no tutorial; the students will tell you how it went.
 
-A shift takes 15–20 minutes. It ends with **Where they are now** (three short
-cards) and a **Calibrated Review Profile** addressed to your session. You'll be
-asked to compose one rule.
+A shift takes 30–40 minutes. It ends with **Where they are now** (one short
+card per case) and a **Calibrated Review Profile** addressed to your session.
+You'll be asked to compose one rule.
+
+Not every draft is wrong. One case is right the first time and wrong the
+second, in the same conversation, seven minutes apart. Holding a good draft
+costs a student something too.
 
 Nothing resets. A bad release stays in the log. Recovery is possible and is
 recorded as recovery, never as erasure.
@@ -94,7 +98,7 @@ Design documents:
 
 - `PLAN.md` — the build plan and source of truth for Shift 1.
 - `REVIEW.md` — a coherence review of the content with numbered findings;
-  1–14 are applied, 15–19 are open.
+  1–14 and 18 are applied, 15–17 and 19 are open.
 - `CLAUDE.md` — working conventions for the AI pair-programmer used to build
   this.
 

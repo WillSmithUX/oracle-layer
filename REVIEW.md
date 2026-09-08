@@ -331,6 +331,13 @@ row, which the tint already computes) and expose it to content as
 `state.derived.overIntervention`. c1t3d's second block can keep an explicit
 flag since PLAN.md names it.
 
+**Applied (expansion pass).** `release()` now sets `state.flags.overIntervention`
+once the rollup counts two or more over-interventions anywhere in the shift,
+and the expansion cases (Theo, Amara) set only case-scoped flags. c0t1's
+escalate and c1t3a/c1t3c/c1t3d keep their explicit flags, so nothing that
+worked before changed; what's new is that a single hold in one case no longer
+rewrites another student's ending on its own.
+
 ## 19. Minor fit and consistency notes
 
 - c1t2 Revise option b ("Remove the aid claim", requires evidence) is scored

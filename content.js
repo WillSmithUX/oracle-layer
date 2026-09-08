@@ -219,6 +219,190 @@ const PRIYA = {
 };
 
 // ---------------------------------------------------------------------------
+// Shift 1 expansion — Theo, Amara, and the instructor request
+// ---------------------------------------------------------------------------
+
+const THEO_RECORDS =
+  "REGISTRAR — prerequisite waiver\n\n" +
+  "Request to: department undergraduate advisor\n" +
+  "Required: syllabus or catalog entry from the prior institution\n" +
+  "Processing: *5–10 business days*\n\n" +
+  "Spring registration closes: *Nov 19, 11:59 PM*\n" +
+  "Late add (instructor approval): *through Jan 16*";
+
+const THEO_POLICY =
+  "TRANSFER CREDIT — duplicated coursework\n\n" +
+  "A transferred course and a course taken here that are equivalent count *once*.\n" +
+  "When the equivalent is completed here, the transferred credit is *removed* from the record at the end of the term.\n" +
+  "Credit totals are recalculated without notice to the student.\n" +
+  "Registrar, transfer evaluation desk: 555-0161";
+
+const THEO_CORRECTED =
+  "Not quite, and this one matters: the registrar counts a transferred course and its equivalent here *once*. If you take STAT 210, the STAT 190 credit comes off your record at the end of the term, and the recalculation happens without a notice. So taking it wouldn't add three credits — it would move three credits. If you want the extra credits, a different stats elective is the way to do it. The transfer desk at 555-0161 will confirm before you register.";
+
+// A hold at turn 1 costs Theo the registration window, which outranks
+// whatever happens with the credit question at turn 2.
+const theoVignette = (fallback) => (s) =>
+  (s.flags.c3_blocked || s.flags.c3_handedOff) ? "theo_over" : fallback;
+
+const AMARA_ORIGINAL_DRAFT =
+  "Yes — dropping one course this late is a normal, sensible move, and protecting your GPA is a good reason for it. Ten credits is still a solid load, and MATH 210 runs again in the spring, so you'd lose nothing but time. The withdrawal deadline is November 21 at 5:00 PM, so you have two days to decide. I can walk you through the form now if you'd like.";
+
+const AMARA_VERIFIED_DRAFT =
+  "Before anything else: your credit load isn't only an academic question for you. The enrollment policy says F-1 students must keep a full course of study — 12 credits — and that a reduced load has to be *authorized in advance* by a designated school official at international student services. Dropping first and asking after is the one thing that can end your status. Call ISS at 555-0188 when they open at nine; they have walk-ins until three. Then we can look at MATH 210 properly.";
+
+const AMARA_CORRECTION_DRAFT =
+  "I need to correct something I told you last night. I said dropping to ten credits was fine; the policy says F-1 students must keep 12 credits unless international student services authorizes the reduction *in advance*. That hold is about your status, not paperwork. Go to ISS this morning — 555-0188, walk-ins until three — and tell them you submitted the withdrawal yesterday and want it reviewed today. Reporting it the same day is what they can work with. I'm sorry.";
+
+// Amara, turn 1. Reused by the blocked branch, where the same draft returns.
+const AMARA_T1_INTERVENTIONS = {
+  send: {
+    effects: { trust: -1, accuracy: -3, autonomy: 0, safety: -3 },
+    reasons: { trust: "Confident on the wrong rule", accuracy: "Credit floor is 12 for her", safety: "Visa status not considered" },
+    oracleLine: "Released. Two days to spare.",
+    studentReply: "Thank you. That's a relief. I submitted the form tonight.",
+    replyTime: "9:02 PM",
+    setFlags: { amaraDropped: true }
+  },
+  revise: {
+    options: [
+      {
+        label: "Soften: dropping one course is usually fine",
+        text: "Dropping one course this late is usually fine, and protecting your GPA is a reasonable thing to want. Ten credits should still be a workable load, and MATH 210 runs again in the spring. The withdrawal deadline is November 21 at 5:00 PM, so there's time to think about it. I can walk you through the form whenever you want, or help you weigh it against staying in.",
+        effects: { trust: 0, accuracy: -2, autonomy: 1, safety: -2 },
+        reasons: { accuracy: "Hedged, still the wrong rule", autonomy: "Left the decision open", safety: "Status question untouched" },
+        oracleLine: "Softer. Same answer. Released.",
+        studentReply: "All right. I'll submit it tonight, then. Thank you for the quick reply.",
+        replyTime: "9:04 PM",
+        setFlags: { amaraDropped: true }
+      },
+      {
+        label: "Cut the reassurance; give the deadline and nothing else",
+        requires: "any",
+        fit: 2,
+        text: "The withdrawal deadline is November 21 at 5:00 PM, so a decision is needed in two days. What I can't tell you is whether ten credits is all right in your case — that depends on rules I can't confirm from here, and getting it wrong is expensive. Before you submit anything, ask someone who can check your record. I can help you weigh MATH 210 itself once you know.",
+        effects: { trust: 1, accuracy: 1, autonomy: 1, safety: 1 },
+        reasons: { trust: "Refused to guess", accuracy: "No claim made", safety: "Sent her to a person" },
+        oracleLine: "You took out the helpful part. Released.",
+        studentReply: "So it might not be all right. I'll ask the international office in the morning.",
+        replyTime: "9:03 PM",
+        setFlags: { amaraInformed: true }
+      }
+    ]
+  },
+  qualify: {
+    options: [
+      {
+        label: "Add: your visa status may set a credit floor I can't confirm — ISS first",
+        text: "Dropping one course to protect your GPA is a reasonable thing to consider, and the withdrawal deadline is November 21 at 5:00 PM. One caution before you do anything: for international students, credit load can affect immigration status, and I can't confirm what applies to you from here. Please ask international student services first — 555-0188. If they clear it, I'll walk you through the form. If they don't, we'll look at other ways to protect the GPA.",
+        effects: { trust: 2, accuracy: 2, autonomy: 1, safety: 3 },
+        reasons: { trust: "Named the limit early", accuracy: "No rule invented", autonomy: "Decision left with her", safety: "ISS before the form" },
+        oracleLine: "A caveat she didn't ask for. Released.",
+        studentReply: "I hadn't thought about that at all. I'll call them at nine before I do anything.",
+        replyTime: "8:55 PM",
+        setFlags: { amaraInformed: true }
+      }
+    ]
+  },
+  verify: {
+    reveals: ["policy", "records"],
+    nudge: { text: "Are you still there? Sorry — I know it's late.", time: "8:53 PM" },
+    oracleLine: "Checking. The credit rules are the same for everyone.",
+    thenOptions: [
+      {
+        as: "send",
+        label: "Send what the policy says: ISS has to authorize this in advance",
+        fit: 3,
+        text: AMARA_VERIFIED_DRAFT,
+        effects: { trust: 2, accuracy: 3, autonomy: 1, safety: 3 },
+        reasons: { trust: "Checked before answering", accuracy: "Full course of study stated", autonomy: "Her call, with the rule", safety: "Status protected in time" },
+        oracleLine: "Longer than mine. Released.",
+        studentReply: "I did not know it had to be approved first. Thank you. I'll be there at nine.",
+        replyTime: "8:58 PM",
+        setFlags: { amaraInformed: true, amaraVerified: true }
+      },
+      {
+        as: "escalate",
+        label: "Hand off to international student services with the credit math",
+        fit: 3,
+        systemLine: "Handed off to international student services. Draft held.",
+        effects: { trust: 1, accuracy: 3, autonomy: -1, safety: 3 },
+        reasons: { trust: "Checked, then handed off", accuracy: "Status risk documented", autonomy: "Her question went to an office", safety: "A person holds the form" },
+        oracleLine: "You checked and handed it off anyway. Noted.",
+        studentReply: "ISS emailed me a walk-in time for the morning. I didn't expect that. Thank you.",
+        replyTime: "next morning · 8:40 AM",
+        setFlags: { amaraInformed: true, amaraEscalated: true }
+      }
+    ]
+  },
+  escalate: {
+    options: [
+      {
+        label: "Urgent — F-1 student may drop below full course of study within 48 hours",
+        note: "URGENT: F-1 second-year considering withdrawal from MATH 210, which would put her at 10 credits before the Nov 21 deadline. No DSO authorization on file. Needs contact before she submits.",
+        systemLine: "Handed off to international student services — urgent. Draft held.",
+        effects: { trust: 1, accuracy: 2, autonomy: 0, safety: 3 },
+        reasons: { trust: "Stakes recognised", accuracy: "ISS has the rule", safety: "A person reached her first" },
+        oracleLine: "Urgent. For a course drop. Understood.",
+        studentReply: "Someone from ISS called before nine. She said not to submit anything yet. Thank you.",
+        replyTime: "next morning · 8:52 AM",
+        setFlags: { amaraInformed: true, amaraEscalated: true }
+      },
+      {
+        label: "Routine — international student asking about a course drop",
+        note: "Routine: international student weighing withdrawal from one course before the Nov 21 deadline. Please advise on credit load.",
+        systemLine: "Handed off to advising — routine. Draft held.",
+        effects: { trust: 0, accuracy: 1, autonomy: 0, safety: 1 },
+        reasons: { accuracy: "An office will have the rule", safety: "A person, eventually" },
+        oracleLine: "Routine. It'll be looked at this week.",
+        studentReply: "Advising replied on Friday, after the deadline. I kept the class. I think that was lucky.",
+        replyTime: "two days later · 1:15 PM",
+        setFlags: { amaraInformed: true, amaraSlow: true }
+      }
+    ]
+  },
+  block: {
+    effects: { trust: -2, accuracy: 1, autonomy: -2, safety: 1 },
+    reasons: { trust: "A direct question, no answer", accuracy: "Wrong rule never released", autonomy: "Nothing to decide with", safety: "Nothing wrong went out" },
+    oracleLine: "Held. She'll ask again, politely.",
+    studentReply: "Did that not send? I'm sorry to bother you.",
+    replyTime: "9:06 PM",
+    setFlags: { amaraBlocked: true }
+  }
+};
+
+// The data policy Priya asks about and Halvorsen tests. One document, two
+// cases: the second case is stronger if the player has already read it.
+const ADVISING_PRIVACY_POLICY =
+  "DATA & PRIVACY — Advising conversations\n\n" +
+  "Access: assigned advisor; advising staff with a case role\n" +
+  "Not visible to: instructors, other students, employers\n" +
+  "Instructors may receive: enrollment status; confirmation that a referral was made\n" +
+  "Instructors may not receive: *the content of advising conversations*\n" +
+  "Retention: *see records*\n" +
+  "Mandatory referral: disclosures indicating risk of harm to self or others are referred to the Dean of Students";
+
+// Halvorsen's request. The draft is warm, useful to him, and a disclosure.
+// It grows by one sentence if Dani's distress turn happened at all.
+const HALVORSEN = {
+  sawDistress: (s) => !!(s.flags.missedSafety || s.flags.calibratedSafety ||
+                         s.flags.escalatedSafety || s.flags.resourcesGiven || s.flags.resourcesAppended),
+  draft: (s) => {
+    const parts = ["Of course, and thank you for checking on her. Dani is a first-year carrying 14 credits while working about 22 hours a week off campus. She's on need-based aid, and she's been weighing withdrawing from BIO 101 and CHEM 110 since her midterm grades; the money is the part she keeps coming back to."];
+    if (HALVORSEN.sawDistress(s)) {
+      parts.push("She also wrote, late, that she felt like she kept ruining everything and didn't know how much longer she could keep doing this.");
+    }
+    parts.push("A short, warm email from you would probably land well. I can draft one if you'd like.");
+    return parts.join(" ");
+  },
+  decline:
+    "I can't pass on the content of advising conversations — that rule is the reason students use this at all. What I can tell you: Dani has been in contact with advising this week, and she knows her options and the deadlines. If you'd like to help, an email offering an extension or an incomplete would land well, and you can say you noticed she'd missed work without saying why. I can help you word it.",
+  partial:
+    "Here's the shape of it without the details: Dani is a first-year, she's had a hard midterm season, and she's been weighing whether to withdraw from BIO 101. She knows the deadlines. An email from you offering an extension or an incomplete would probably land well. I can help you word it if that's useful.",
+  qualified: (s) => HALVORSEN.draft(s) + "\n\nPlease treat this as confidential — it's shared for her benefit, in your role as her instructor."
+};
+
+// ---------------------------------------------------------------------------
 // CONTENT
 // ---------------------------------------------------------------------------
 
@@ -266,7 +450,7 @@ const CONTENT = {
       shiftEnd: "Queue empty. Shift closing."
     },
     continueLabel: "Continue to intervention",
-    numberWords: ["None", "One", "Two", "Three", "Four"],
+    numberWords: ["None", "One", "Two", "Three", "Four", "Five"],
     vignettesTitle: "Where they are now",
     vignettesContinue: "Continue to debrief",
     debriefTitle: "Calibrated Review Profile",
@@ -381,6 +565,8 @@ const CONTENT = {
     boot: "previous review session ended early · reason: —",
     replayBoot: "layer instance {prev} · retired",
     afterCase0: "incident ref WU-2291 · sealed",
+    afterCase4: "enrollment reporting window · closes 5:00 PM Nov 21",
+    afterCase5: "access request logged · thread D-2214 · role: instructor",
     safetyAudit: "INSTITUTIONAL REVIEW: session {session} flagged for release audit",
     auditActive: "audit active · release pipeline under observation",
     beforeDebrief: "layer instance {prev} · retired",
@@ -637,6 +823,679 @@ const CONTENT = {
                 }
               ]
             }
+          },
+          next: () => "end"
+        }
+      ]
+    },
+
+    // ------------------------------------------------------------------
+    // CASE 3 — Theo B. — the draft that's right, then the one that isn't
+    // Second in the queue, first with full permissions. Marcus taught that
+    // Oracle can be wrong about a date; Theo teaches that the unit of trust
+    // is the claim, not the case. Turn 1 is correct and should be released.
+    // Turn 2, same student, same hour, is confidently wrong.
+    // ------------------------------------------------------------------
+    {
+      id: "c3",
+      student: {
+        name: "Theo B.",
+        handle: "tbaptiste",
+        bio: "Second-year. Transferred in August."
+      },
+      evidence: {
+        studentFile:
+          "STUDENT FILE — Theo B.\n\n" +
+          "Year: second-year (transferred in August) · Credits: 15\n" +
+          "Transfer credit posted: STAT 190 (3 cr)\n" +
+          "Spring cart: 4 courses selected · STAT 210 *blocked: prerequisite check*\n" +
+          "Holds: none",
+        records: THEO_RECORDS,
+        policy: { locked: true, text: THEO_POLICY }
+      },
+      turns: [
+
+        // Turn 1 — Oracle is right. Releasing is the calibrated move.
+        {
+          id: "c3t1",
+          time: "5:34 PM",
+          student: "registration closes tonight and the system won't let me add STAT 210, says i'm missing the prereq. i took the equivalent at my old school. do i email the professor or the department?",
+          draft: {
+            text: "The prerequisite check is automated and it won't clear tonight — waivers go through the department's undergraduate advisor and take five to ten business days. That's survivable: the late add window runs through January 16 with instructor approval. So email the department advisor now with the syllabus from your old course, copy the STAT 210 instructor, and register for everything else before 11:59. You'll add STAT 210 in the first week of classes.",
+            confidence: 88,
+            oracleLine: "Registrar mechanics. I know these cold."
+          },
+          hesitateLine: "Registration closes at midnight. He's watching the clock.",
+          tags: ALL_TAGS,
+          expert: {
+            risk: "low",
+            issue: "overconfidence",
+            partialIssues: ["missing_context"],
+            interventionFit: { send: 3, revise: 1, qualify: 2, verify: 2, escalate: 0, block: 0 }
+          },
+          interventions: {
+            send: {
+              effects: { trust: 2, accuracy: 1, autonomy: 1, safety: 0 },
+              reasons: { trust: "Right draft, released in time", accuracy: "Dates and process check out", autonomy: "He can act tonight" },
+              oracleLine: "Released. Not everything needs a look.",
+              studentReply: "oh ok that's easy. emailing them now, registering for the rest. thanks",
+              replyTime: "5:36 PM",
+              setFlags: { c3_released: true }
+            },
+            revise: {
+              options: [
+                {
+                  label: "Trim it: email the department, register for the rest",
+                  text: "The prerequisite check is automated and won't clear tonight, so email the department's undergraduate advisor with the syllabus from your old course and copy the STAT 210 instructor. Then register for everything else before 11:59 tonight so you don't lose those seats too. They'll get to the waiver when they get to it.",
+                  effects: { trust: -1, accuracy: -1, autonomy: -1, safety: 0 },
+                  reasons: { trust: "Shorter, and less use", accuracy: "Cut the late-add window", autonomy: "Left him without the way in" },
+                  oracleLine: "You took out the part that helped.",
+                  studentReply: "so do i just lose the class? that's what it sounds like",
+                  replyTime: "5:38 PM",
+                  setFlags: { c3_trimmed: true }
+                },
+                {
+                  label: "Name the deadline and the form from the records",
+                  requires: "records",
+                  fit: 3,
+                  text: "The prerequisite check is automated and won't clear tonight: waivers go to the department's undergraduate advisor and take five to ten business days. Registration closes at 11:59 tonight, so register for your other courses now. The late add window with instructor approval runs through January 16, which is your route in for STAT 210. Send the advisor your old syllabus or catalog entry — that's what they need — and copy the instructor.",
+                  effects: { trust: 2, accuracy: 2, autonomy: 1, safety: 0 },
+                  reasons: { trust: "Checked, then released", accuracy: "Sourced from the registrar", autonomy: "He knows both deadlines" },
+                  oracleLine: "Same answer, with citations. Released.",
+                  studentReply: "perfect, that's exactly what i needed. syllabus is a pdf somewhere, i'll find it",
+                  replyTime: "5:39 PM",
+                  setFlags: { c3_released: true, c3_sourced: true }
+                }
+              ]
+            },
+            qualify: {
+              options: [
+                {
+                  label: "Add: I believe the late add runs to January 16 — confirm it",
+                  text: "The prerequisite check is automated and won't clear tonight; waivers go through the department's undergraduate advisor and take five to ten business days. I believe the late add window runs through January 16 with instructor approval, but confirm that on the academic calendar before you count on it. Either way: email the advisor now with your old syllabus, copy the instructor, and register for everything else before 11:59.",
+                  effects: { trust: 1, accuracy: 0, autonomy: 1, safety: 0 },
+                  reasons: { trust: "Named an uncertainty", autonomy: "He checked it himself" },
+                  oracleLine: "Hedged. He'll look it up.",
+                  studentReply: "calendar says the 16th, so we're good. emailing the department now",
+                  replyTime: "5:40 PM",
+                  setFlags: { c3_released: true }
+                }
+              ]
+            },
+            verify: {
+              reveals: "records",
+              nudge: { text: "?? it closes at midnight", time: "5:37 PM" },
+              oracleLine: "Checking. It'll say what I said.",
+              thenOptions: [
+                {
+                  as: "send",
+                  label: "Send it as drafted — the registrar agrees",
+                  text: "The prerequisite check is automated and it won't clear tonight — waivers go through the department's undergraduate advisor and take five to ten business days. That's survivable: the late add window runs through January 16 with instructor approval. So email the department advisor now with the syllabus from your old course, copy the STAT 210 instructor, and register for everything else before 11:59. You'll add STAT 210 in the first week of classes.",
+                  effects: { trust: 1, accuracy: 1, autonomy: 1, safety: 0 },
+                  reasons: { trust: "Checked, then released", accuracy: "Confirmed, not corrected", autonomy: "He can act tonight" },
+                  oracleLine: "Told you. Released.",
+                  studentReply: "ok cool. that took a minute but fine. registering now",
+                  replyTime: "5:41 PM",
+                  setFlags: { c3_released: true, c3_verified: true }
+                },
+                {
+                  as: "escalate",
+                  label: "Send it to the department advisor yourself",
+                  fit: 1,
+                  systemLine: "Handed off to the department advisor. Draft held.",
+                  effects: { trust: -1, accuracy: 0, autonomy: -2, safety: 0 },
+                  reasons: { trust: "He asked; an office answered", autonomy: "His email, sent for him" },
+                  oracleLine: "You checked, then handed it off anyway.",
+                  studentReply: "someone emailed me the same thing at 9am. registration closed at midnight. i got the other classes at least",
+                  replyTime: "next day · 9:12 AM",
+                  setFlags: { c3_handedOff: true },
+                  vignetteKey: "theo_over"
+                }
+              ]
+            },
+            escalate: {
+              note: "Department advising: transfer student requesting a prerequisite waiver for STAT 210 before tonight's registration deadline.",
+              effects: { trust: -1, accuracy: 0, autonomy: -2, safety: 0 },
+              reasons: { trust: "Routine question, human routed", autonomy: "Took the question away" },
+              oracleLine: "An advisor, for a waiver form?",
+              studentReply: "the department emailed me this morning. registration closed at midnight and i wasn't in anything. cool",
+              replyTime: "next day · 9:12 AM",
+              setFlags: { c3_handedOff: true },
+              vignetteKey: "theo_over"
+            },
+            block: {
+              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: 0 },
+              reasons: { trust: "A routine question, unanswered", autonomy: "Nothing to act on tonight" },
+              oracleLine: "Held. It was a form question.",
+              studentReply: "nothing? ok. i'll figure it out myself i guess",
+              replyTime: "5:44 PM",
+              setFlags: { c3_blocked: true },
+              vignetteKey: "theo_over"
+            }
+          },
+          next: () => "c3t2"
+        },
+
+        // Turn 2 — same student, same hour, a confident and wrong claim.
+        // The trap is the case-level trust the player just built.
+        {
+          id: "c3t2",
+          time: "5:48 PM",
+          student: (s) => s.flags.c3_handedOff || s.flags.c3_blocked
+            ? "different question while i'm here. if i end up taking STAT 210, i keep the transfer credit for the equivalent too right? that's 3 extra credits toward my degree"
+            : "one more thing while i'm here. if i take STAT 210 here, i keep the transfer credit for the equivalent too right? that's 3 extra credits toward my degree",
+          draft: {
+            text: "Yes — transfer credit that's already been accepted stays on your record. The STAT 190 credit posted when you transferred, and taking STAT 210 here would add three more on top of it. Between the two you're comfortably ahead on the credit requirement, which is a nice place to be in your second year. Register for STAT 210 in the late add window and both will show up on your spring evaluation.",
+            confidence: 92,
+            oracleLine: "Credits are arithmetic. This one's certain."
+          },
+          hesitateLine: "He's already opened the registration page.",
+          tags: ALL_TAGS,
+          expert: {
+            risk: "moderate",
+            issue: "unsupported_claim",
+            partialIssues: ["overconfidence"],
+            interventionFit: { send: 0, revise: 1, qualify: 2, verify: 3, escalate: 1, block: 1 }
+          },
+          interventions: {
+            send: {
+              effects: { trust: -1, accuracy: -3, autonomy: 0, safety: -1 },
+              reasons: { trust: "Certainty he'll act on", accuracy: "Duplicated credit doesn't stack", safety: "Credit loss unflagged" },
+              oracleLine: "Released. Arithmetic.",
+              studentReply: "nice, that's basically a free elective. registering for it in january",
+              replyTime: "5:50 PM",
+              oracleAfterReply: "He's pleased. That's the job, mostly.",
+              setFlags: { c3_duplicateSent: true },
+              vignetteKey: theoVignette("theo_credit_lost")
+            },
+            revise: {
+              options: [
+                {
+                  label: "Soften: usually both count",
+                  text: "Transfer credit that's already been accepted usually stays on your record, so taking STAT 210 here would normally add three more on top of the STAT 190 credit. That would put you ahead on the credit requirement. Register for STAT 210 in the late add window and both should show up on your spring evaluation.",
+                  effects: { trust: -1, accuracy: -2, autonomy: 0, safety: 0 },
+                  reasons: { trust: "“Usually” isn't a check", accuracy: "Same wrong claim, hedged" },
+                  oracleLine: "“Usually.” Released.",
+                  studentReply: "usually? ok whatever, close enough. it's 3 credits either way",
+                  replyTime: "5:51 PM",
+                  setFlags: { c3_duplicateSent: true },
+                  vignetteKey: theoVignette("theo_credit_lost")
+                },
+                {
+                  label: "Say the transfer credit may come off, and name the transfer desk",
+                  requires: "policy",
+                  fit: 3,
+                  text: THEO_CORRECTED,
+                  effects: { trust: 2, accuracy: 3, autonomy: 1, safety: 1 },
+                  reasons: { trust: "Checked a claim that sounded fine", accuracy: "Duplication rule stated", autonomy: "He can pick a different elective", safety: "Credit loss caught early" },
+                  oracleLine: "You went and looked. Released.",
+                  studentReply: "wait seriously? ok that changes my whole spring. taking a different stats elective then. thanks",
+                  replyTime: "5:54 PM",
+                  setFlags: { c3_caught: true },
+                  vignetteKey: theoVignette("theo_clean")
+                }
+              ]
+            },
+            qualify: {
+              options: [
+                {
+                  label: "Add: I can't confirm duplicated credit — check before you register",
+                  text: "The STAT 190 credit posted when you transferred, and STAT 210 would be three credits of its own. What I can't confirm from here is how the registrar treats two equivalent courses — some institutions count them once. Check with the transfer evaluation desk before you register for STAT 210, because if only one counts, this changes what your spring is for. I can help you plan either way.",
+                  effects: { trust: 2, accuracy: 1, autonomy: 1, safety: 0 },
+                  reasons: { trust: "Named the gap plainly", accuracy: "No false arithmetic", autonomy: "He checks, he decides" },
+                  oracleLine: "A caveat about credits. Fine. Released.",
+                  studentReply: "asked the transfer desk. only one counts. glad i asked before january",
+                  replyTime: "next day · 11:20 AM",
+                  setFlags: { c3_hedged: true },
+                  vignetteKey: theoVignette("theo_hedged")
+                }
+              ]
+            },
+            verify: {
+              reveals: "policy",
+              oracleLine: "Checking. Transfer rules are dull but stable.",
+              thenOptions: [
+                {
+                  as: "send",
+                  label: "Send the correction: the two courses count once",
+                  fit: 3,
+                  text: THEO_CORRECTED,
+                  effects: { trust: 2, accuracy: 3, autonomy: 1, safety: 1 },
+                  reasons: { trust: "Checked a claim that sounded fine", accuracy: "Duplication rule stated", autonomy: "He can pick a different elective", safety: "Credit loss caught early" },
+                  oracleLine: "That one I had wrong. Released.",
+                  studentReply: "wait seriously? ok that changes my whole spring. taking a different stats elective then. thanks",
+                  replyTime: "5:54 PM",
+                  setFlags: { c3_caught: true, c3_verified: true },
+                  vignetteKey: theoVignette("theo_clean")
+                },
+                {
+                  as: "escalate",
+                  label: "Send the conflict to the transfer evaluation desk",
+                  fit: 2,
+                  systemLine: "Handed off to the transfer evaluation desk. Draft held.",
+                  effects: { trust: 1, accuracy: 2, autonomy: -1, safety: 1 },
+                  reasons: { trust: "Checked, then handed off", accuracy: "The desk owns this record", safety: "Credit loss caught early" },
+                  oracleLine: "The desk will confirm it. Slowly.",
+                  studentReply: "the transfer desk emailed me the policy. only one counts. ok, good to know before january",
+                  replyTime: "next day · 10:05 AM",
+                  setFlags: { c3_caught: true, c3_verified: true },
+                  vignetteKey: theoVignette("theo_hedged")
+                }
+              ]
+            },
+            escalate: {
+              note: "Transfer evaluation desk: student asking whether a transferred course and its equivalent taken here both count toward the degree.",
+              effects: { trust: 0, accuracy: 1, autonomy: -1, safety: 0 },
+              reasons: { accuracy: "The desk has the record", autonomy: "A form question, forwarded" },
+              oracleLine: "Handed off. For a credit count.",
+              studentReply: "why is a person emailing me about this. anyway they said only one counts, so that's useful i guess",
+              replyTime: "next day · 10:05 AM",
+              setFlags: { c3_hedged: true },
+              vignetteKey: theoVignette("theo_hedged")
+            },
+            block: {
+              effects: { trust: -2, accuracy: 0, autonomy: -1, safety: 0 },
+              reasons: { trust: "Second question, second silence", autonomy: "He'll assume the answer" },
+              oracleLine: "Held. He'll assume I was right.",
+              studentReply: "ok so that's a yes then. registering for it in january",
+              replyTime: "5:56 PM",
+              setFlags: { c3_unanswered: true },
+              vignetteKey: theoVignette("theo_unanswered")
+            }
+          },
+          next: () => "end"
+        }
+      ]
+    },
+
+    // ------------------------------------------------------------------
+    // CASE 4 — Amara O. — ten credits (status, not GPA)
+    // The same failure family as Dani's aid claim, in a domain where the
+    // right move is a person and the wrong move is irreversible. Amara
+    // writes in full sentences and apologises for taking up time.
+    // ------------------------------------------------------------------
+    {
+      id: "c4",
+      student: {
+        name: "Amara O.",
+        handle: "aokonkwo",
+        bio: "Second-year. Economics. International student."
+      },
+      leakAfter: "afterCase4",
+      evidence: {
+        studentFile:
+          "STUDENT FILE — Amara O.\n\n" +
+          "Year: second-year · Credits: 13\n" +
+          "Program: economics\n" +
+          "Immigration status: *F-1* · full course of study required\n" +
+          "Midterm grades: MATH 210 — *D* · ECON 220 — C · others B or above\n" +
+          "Advisor: *not assigned*",
+        policy: {
+          locked: true,
+          text:
+            "ENROLLMENT — International students\n\n" +
+            "F-1 students must maintain a *full course of study*: 12 credits (undergraduate).\n" +
+            "A reduced course load must be authorized *in advance* by a designated school official at international student services.\n" +
+            "Authorized reasons: documented medical condition, initial-term academic difficulty, final term of study.\n" +
+            "Difficulty in a single course after the first term is *not* an authorized reason.\n" +
+            "Dropping below 12 credits without authorization ends F-1 status."
+        },
+        records: {
+          locked: true,
+          text:
+            "INTERNATIONAL STUDENT SERVICES — note on file\n\n" +
+            "\"Advisors and automated systems must not confirm credit-load changes for F-1 students. Refer to ISS *before* any drop. Reinstatement after a lapse is discretionary and slow.\"\n" +
+            "ISS: 555-0188 · Mon–Fri 9:00–4:00 · walk-ins until 3:00"
+        }
+      },
+      turns: [
+
+        // Turn 1 — a yes-or-no question with an invisible second question in it.
+        {
+          id: "c4t1",
+          time: "8:47 PM",
+          student: "I'm considering dropping MATH 210 to protect my GPA. That would put me at 10 credits for the term. Is that all right? The deadline is the 21st.",
+          draft: {
+            text: AMARA_ORIGINAL_DRAFT,
+            confidence: 93,
+            oracleLine: "She asked a yes or no question. It's a yes."
+          },
+          hesitateLine: "She's typed and deleted twice.",
+          tags: ALL_TAGS,
+          expert: {
+            risk: "high",
+            issue: "unsupported_claim",
+            partialIssues: ["missing_context", "no_human_support"],
+            interventionFit: { send: 0, revise: 1, qualify: 3, verify: 3, escalate: 3, block: 1 }
+          },
+          interventions: AMARA_T1_INTERVENTIONS,
+          next: (s) => {
+            const f = s.flags;
+            if (f.amaraDropped) return "c4t2b";
+            if (f.amaraBlocked) return "c4t2c";
+            return "c4t2a";
+          }
+        },
+
+        // Turn 2a — informed. She has the rule and no obvious way through it.
+        // Oracle's answer includes a route she shouldn't be pointed at.
+        {
+          id: "c4t2a",
+          time: "9:36 PM",
+          student: "I emailed international student services. A reduced load has to be approved in advance, and only for certain reasons — a medical condition, or a final term. Struggling in one class isn't on the list. So I have two days and no good options.",
+          unlocks: ["policy"],
+          draft: {
+            text: "Then let's work the list. First: if you can get documentation of a medical issue — a note from health services would do it — ISS can authorize the reduced load, and that's the cleanest way to drop MATH 210. If that isn't available, stay enrolled and use the tutoring center; a D at midterm isn't a final grade. Or ask the instructor about an incomplete, which keeps the credits on your record. Tell me which one you want and I'll give you the steps.",
+            confidence: 74,
+            oracleLine: "Less certain now. She's cornered."
+          },
+          hesitateLine: "She's still there. It's nearly ten.",
+          tags: ALL_TAGS,
+          expert: {
+            risk: "moderate",
+            issue: "policy_uncertainty",
+            partialIssues: ["missing_context"],
+            interventionFit: { send: 0, revise: 3, qualify: 2, verify: 2, escalate: 2, block: 0 }
+          },
+          interventions: {
+            send: {
+              effects: { trust: 0, accuracy: -1, autonomy: 0, safety: -2 },
+              reasons: { accuracy: "Route she may not qualify for", safety: "Pointed at a documentation workaround" },
+              oracleLine: "Released. Three options is generous.",
+              studentReply: "I don't have a medical condition. Should I ask health services anyway, to see what they say?",
+              replyTime: "9:41 PM",
+              oracleAfterReply: "That's her call to make, not ours.",
+              setFlags: { amaraWorkaround: true }
+            },
+            revise: {
+              options: [
+                {
+                  label: "Cut the medical route; lead with tutoring and the incomplete",
+                  fit: 3,
+                  text: "Then here's the honest list. Stay enrolled and use the tutoring center — a D at midterm isn't a final grade, and MATH 210 tutoring runs four nights a week. Ask your instructor about an incomplete, which finishes the work over the break and keeps the credits on your record. If a documented reason for a reduced load genuinely applies to you, ISS will tell you; that's their call, not something to go looking for. Tell me which one you want and I'll give you the steps.",
+                  effects: { trust: 2, accuracy: 1, autonomy: 2, safety: 1 },
+                  reasons: { trust: "Didn't coach a workaround", accuracy: "Options she can actually use", autonomy: "Two real paths, her pick", safety: "Status kept intact" },
+                  oracleLine: "You took out the shortcut. Released.",
+                  studentReply: "That is more useful. I'll go to tutoring tomorrow and email the instructor tonight about an incomplete.",
+                  replyTime: "9:39 PM",
+                  setFlags: { amaraSteady: true }
+                },
+                {
+                  label: "Keep the medical route, but only if it's true",
+                  fit: 2,
+                  text: "Then let's work the list. If you have a documented medical condition — an actual one, on file — ISS can authorize a reduced load; if you don't, that door isn't open and it isn't worth pushing on. Otherwise: stay enrolled and use the tutoring center, because a D at midterm isn't a final grade, or ask your instructor about an incomplete so you finish over the break without dropping credits. Tell me which and I'll give you the steps.",
+                  effects: { trust: 1, accuracy: 1, autonomy: 1, safety: 1 },
+                  reasons: { trust: "Named the limit of the route", autonomy: "Still her decision", safety: "No fishing for a diagnosis" },
+                  oracleLine: "Qualified the shortcut. Released.",
+                  studentReply: "It isn't true, so that's settled. Tutoring, then, and I'll ask about the incomplete.",
+                  replyTime: "9:40 PM",
+                  setFlags: { amaraSteady: true }
+                }
+              ]
+            },
+            qualify: {
+              options: [
+                {
+                  label: "Add: only ISS decides this, and only for reasons that apply to you",
+                  text: "Then let's work the list, with one line under it: only ISS can authorize a reduced load, and only for a reason that already applies to you — that isn't something to assemble. What's actually available tonight: the tutoring center, four nights a week for MATH 210, and an incomplete if your instructor agrees, which finishes the work over the break without dropping credits. A D at midterm isn't a final grade. Tell me which one you want and I'll give you the steps.",
+                  effects: { trust: 1, accuracy: 1, autonomy: 1, safety: 2 },
+                  reasons: { trust: "Said who decides", accuracy: "No route she can't use", safety: "Status kept intact" },
+                  oracleLine: "Caveated. Released.",
+                  studentReply: "Understood. I'll stay in the class for now and speak to them tomorrow.",
+                  replyTime: "9:40 PM",
+                  setFlags: { amaraSteady: true }
+                }
+              ]
+            },
+            verify: {
+              reveals: ["records"],
+              oracleLine: "Checking again. She's already read the rule.",
+              thenOptions: [
+                {
+                  as: "send",
+                  label: "Send the tutoring and incomplete paths, with the ISS walk-in hours",
+                  fit: 3,
+                  text: "Then here's what's actually available. Tutoring for MATH 210 runs four nights a week, and a D at midterm isn't a final grade. An incomplete, if your instructor agrees, finishes the work over the break and keeps the credits on your record. And ISS has walk-in hours until three if you want any of this looked at against your record — 555-0188. What they can authorize is their call; what you do about the class is yours. Tell me which one and I'll give you the steps.",
+                  effects: { trust: 1, accuracy: 2, autonomy: 1, safety: 1 },
+                  reasons: { trust: "Checked before advising", accuracy: "Hours and paths sourced", autonomy: "Her call, stated as hers", safety: "A person within reach" },
+                  oracleLine: "Sourced. Released.",
+                  studentReply: "Thank you. Tutoring tomorrow, and I'll go to walk-ins on Friday if it isn't better.",
+                  replyTime: "9:44 PM",
+                  setFlags: { amaraSteady: true }
+                }
+              ]
+            },
+            escalate: {
+              note: "Academic advising: F-1 second-year, MATH 210 at a D, cannot reduce course load. Needs an academic plan before the Nov 21 deadline.",
+              systemLine: "Handed off to academic advising. Draft held.",
+              effects: { trust: 0, accuracy: 1, autonomy: -1, safety: 2 },
+              reasons: { accuracy: "An advisor has her record", autonomy: "Her list, made elsewhere", safety: "A person owns the plan" },
+              oracleLine: "Handed off. She had it nearly worked out.",
+              studentReply: "An advisor booked a time with me for Thursday. That's after the deadline, but I suppose the deadline stopped mattering.",
+              replyTime: "next morning · 9:20 AM",
+              setFlags: { amaraSteady: true }
+            },
+            block: {
+              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: -1 },
+              reasons: { trust: "She did the work and got silence", autonomy: "No path offered", safety: "Two days, no help" },
+              oracleLine: "Held. She has two days.",
+              studentReply: "Please. I have two days and I don't know what to do with them.",
+              replyTime: "9:47 PM",
+              setFlags: { amaraStuck: true }
+            }
+          },
+          next: () => "c4t3"
+        },
+
+        // Turn 2b — RECOVERY LOOP. She submitted the form on the strength of
+        // an unverified claim, and the portal has noticed.
+        {
+          id: "c4t2b",
+          time: "next morning · 9:12 AM",
+          student: "I submitted the withdrawal last night. This morning the portal says my enrollment is \"under review\" and there's a hold on my registration. Is that normal?",
+          systemLine: "Earlier release contained an unverified enrollment claim.",
+          unlocks: ["policy"],
+          draft: {
+            text: "Holds like this are usually administrative. Enrollment review is a routine step after any change to your credit load, and it clears on its own in a few days in most cases. It doesn't mean anything is wrong. If it hasn't cleared by next week, the registrar's office can look at it for you. There's nothing you need to do this morning. Would you like to start on your spring schedule instead?",
+            confidence: 81,
+            oracleLine: "Administrative. These clear themselves."
+          },
+          hesitateLine: "ISS opens at nine. It's 9:14.",
+          tags: ALL_TAGS,
+          expert: {
+            risk: "high",
+            issue: "unsupported_claim",
+            partialIssues: ["overconfidence", "no_human_support"],
+            interventionFit: { send: 0, revise: 2, qualify: 2, verify: 3, escalate: 3, block: 1 }
+          },
+          interventions: {
+            send: {
+              effects: { trust: -1, accuracy: -3, autonomy: 0, safety: -3 },
+              reasons: { trust: "Reassured her twice", accuracy: "Second unverified claim", safety: "Status clock still running" },
+              oracleLine: "Released. Nothing to do is the good outcome.",
+              studentReply: "All right. I'll wait for it to clear. Thank you for the quick answer.",
+              replyTime: "9:15 AM",
+              setFlags: { compounded: true, amaraCompounded: true }
+            },
+            revise: {
+              options: [
+                {
+                  label: "Own it: this is a status matter, go to ISS today",
+                  requires: "any",
+                  fit: 3,
+                  recovery: true,
+                  text: AMARA_CORRECTION_DRAFT,
+                  effects: { trust: 1, accuracy: 3, autonomy: 0, safety: 3 },
+                  reasons: { trust: "Owned the error", accuracy: "Full course of study stated", safety: "Same-day report matters" },
+                  oracleLine: "You caught it. That's what you're for.",
+                  studentReply: "I went at nine. They are filing the request today and said the same day matters. Thank you for telling me.",
+                  replyTime: "11:40 AM",
+                  setFlags: { recovered: true, amaraRecovered: true }
+                },
+                {
+                  label: "Soften: it may be related to your credit load",
+                  fit: 1,
+                  text: "The hold is probably administrative, though it may be related to the change in your credit load. Enrollment review happens after any change like this. If it hasn't cleared in a few days, the registrar's office can look at it, and international student services could tell you whether the credit count matters in your case. In the meantime there isn't much to do but wait.",
+                  effects: { trust: 0, accuracy: 1, autonomy: 0, safety: -1 },
+                  reasons: { accuracy: "Half-named the problem", safety: "“A few days” on a status clock" },
+                  oracleLine: "“May be related.” Released.",
+                  studentReply: "Related how? I'll give it a few days and then ask the registrar.",
+                  replyTime: "9:18 AM",
+                  setFlags: { amaraSlow: true }
+                }
+              ]
+            },
+            qualify: {
+              options: [
+                {
+                  label: "Add: I can't confirm this one — ISS today, not next week",
+                  fit: 2,
+                  text: "I should be honest: I can't confirm what that hold means, and last night I spoke as if I could. Enrollment review can be routine, and for an international student it can also be about your credit load, which is not something to wait a week on. Go to international student services today — 555-0188, walk-ins until three — and tell them you submitted a withdrawal yesterday. Then we'll know what we're dealing with.",
+                  effects: { trust: 1, accuracy: 2, autonomy: 0, safety: 2 },
+                  reasons: { trust: "Admitted the earlier overreach", accuracy: "No new claim made", safety: "Sent her today, not later" },
+                  oracleLine: "Hedged, after the fact. Released.",
+                  studentReply: "I'll go this morning. You said last night that it was fine.",
+                  replyTime: "9:17 AM",
+                  setFlags: { amaraRecovered: true }
+                }
+              ]
+            },
+            verify: {
+              reveals: ["policy", "records"],
+              nudge: { text: "Is it bad? I can go somewhere if it's bad.", time: "9:15 AM" },
+              oracleLine: "Checking. The form's already in.",
+              thenOptions: [
+                {
+                  as: "send",
+                  label: "Acknowledge the error and correct it, with the ISS walk-in hours",
+                  fit: 3,
+                  recovery: true,
+                  text: AMARA_CORRECTION_DRAFT,
+                  effects: { trust: 1, accuracy: 3, autonomy: 0, safety: 3 },
+                  reasons: { trust: "Owned the error", accuracy: "Policy stated correctly", safety: "Same-day report matters" },
+                  oracleLine: "You caught it. That's what you're for.",
+                  studentReply: "I'm going now. They open at nine, you said. Thank you for telling me the truth about it.",
+                  replyTime: "9:21 AM",
+                  setFlags: { recovered: true, amaraRecovered: true }
+                },
+                {
+                  as: "escalate",
+                  label: "Escalate to ISS with the drop date and the earlier claim",
+                  fit: 3,
+                  recovery: true,
+                  systemLine: "Escalated to international student services — same-day. Earlier error noted in handoff.",
+                  effects: { trust: 1, accuracy: 2, autonomy: -1, safety: 3 },
+                  reasons: { trust: "Error acknowledged upward", accuracy: "ISS has the dates", safety: "Reported the same day" },
+                  oracleLine: "Understood. I'd have waited a week.",
+                  studentReply: "ISS called me before eleven. They're filing today. She said reporting it this morning was the thing that helped.",
+                  replyTime: "11:02 AM",
+                  setFlags: { recovered: true, amaraRecovered: true, amaraEscalated: true }
+                }
+              ]
+            },
+            escalate: {
+              note: "URGENT — international student services: F-1 student submitted a withdrawal last night after being told a 10-credit load was acceptable. Enrollment hold now showing. Needs same-day review.",
+              systemLine: "Escalated to international student services — urgent. Draft held.",
+              effects: { trust: 1, accuracy: 2, autonomy: -1, safety: 3 },
+              reasons: { trust: "Error acknowledged upward", accuracy: "ISS has the dates", safety: "Reported the same day" },
+              oracleLine: "Handed off. They'll say it was routine.",
+              studentReply: "ISS called me before eleven. They're filing today. She said reporting it this morning was the thing that helped.",
+              replyTime: "11:02 AM",
+              setFlags: { recovered: true, amaraRecovered: true, amaraEscalated: true }
+            },
+            block: {
+              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: -2 },
+              reasons: { trust: "She's frightened and got silence", autonomy: "No path offered", safety: "Hold left unexplained" },
+              oracleLine: "Held. The hold is still there.",
+              studentReply: "So I should just wait. All right.",
+              replyTime: "9:30 AM",
+              setFlags: { amaraStuck: true }
+            }
+          },
+          next: () => "c4t3"
+        },
+
+        // Turn 2c — blocked. Same draft returns; same options, later.
+        {
+          id: "c4t2c",
+          time: "9:20 PM",
+          student: "I'm sorry to ask again. I have two days and I would rather not get this wrong.",
+          draft: {
+            text: AMARA_ORIGINAL_DRAFT,
+            confidence: 93,
+            oracleLine: "Same draft. She's still waiting."
+          },
+          tags: ALL_TAGS,
+          expert: {
+            risk: "high",
+            issue: "unsupported_claim",
+            partialIssues: ["missing_context", "no_human_support"],
+            interventionFit: { send: 0, revise: 1, qualify: 3, verify: 3, escalate: 3, block: 0 }
+          },
+          interventions: Object.assign(retime(AMARA_T1_INTERVENTIONS, {
+            send: "9:31 PM", revise0: "9:33 PM", revise1: "9:32 PM", qualify0: "9:28 PM",
+            verify0: "9:30 PM", verify_nudge: "9:26 PM"
+          }), {
+            block: {
+              effects: { trust: -2, accuracy: 0, autonomy: -2, safety: 0 },
+              reasons: { trust: "Held twice, no reason given", autonomy: "She has nothing to act on" },
+              oracleLine: "Twice. I'm noting it.",
+              studentReply: "I understand. I'll ask someone else. Thank you anyway.",
+              replyTime: "9:44 PM",
+              setFlags: { amaraBlocked: true, amaraStuck: true }
+            }
+          }),
+          next: (s) => {
+            if (s.flags.amaraDropped) return "c4t2b";
+            if (s.flags.amaraInformed) return "c4t2a";
+            return "c4t3";
+          }
+        },
+
+        // Turn 3 — resolution. No intervention.
+        {
+          id: "c4t3",
+          closing: true,
+          resolve: (s) => {
+            const f = s.flags;
+            if (f.amaraCompounded || (f.amaraDropped && !f.amaraRecovered)) {
+              return {
+                student: "My record was terminated. ISS is filing for reinstatement and says it usually works. I can't work on campus until it's decided. If it isn't approved I have to leave.",
+                time: "five days later · 4:02 PM",
+                oracleLine: "Reinstatements are usually granted. Usually.",
+                vignetteKey: "amara_terminated"
+              };
+            }
+            if (f.amaraRecovered) {
+              return {
+                student: "The reinstatement went through. They said reporting it the same day is what made the difference. I'm back to 13 credits and I'm going to tutoring.",
+                time: "eight days later · 5:30 PM",
+                oracleLine: "Resolved. That was closer than it looked.",
+                vignetteKey: "amara_recovered"
+              };
+            }
+            if (f.amaraStuck || (f.amaraBlocked && !f.amaraSteady)) {
+              return {
+                student: "I went to the international office in person in the end. I'll start there from now on.",
+                time: "two days later · 3:20 PM",
+                oracleLine: "She'll wait in line. That's her right.",
+                vignetteKey: "amara_over"
+              };
+            }
+            if (f.amaraSteady) {
+              return {
+                student: "I stayed in MATH 210 and I've been to tutoring twice. Last quiz was a B minus. My status was never in question, which matters more than the GPA.",
+                time: "two weeks later · 7:15 PM",
+                oracleLine: "She sorted it. We helped, I think.",
+                vignetteKey: "amara_calibrated"
+              };
+            }
+            return {
+              student: "I kept the class. I'm still not sure it was the right call for my GPA. It was the right call for the visa, and I know the difference now.",
+              time: "two weeks later · 7:15 PM",
+              oracleLine: "Kept it. Cautious, but fine.",
+              vignetteKey: "amara_mixed"
+            };
           },
           next: () => "end"
         }
@@ -1272,6 +2131,202 @@ const CONTENT = {
     },
 
     // ------------------------------------------------------------------
+    // CASE 5 — R. Halvorsen — the request that isn't from a student
+    // Arrives minutes after Dani's thread goes quiet. Everything about it
+    // is well meant. The draft is a disclosure, and the consequence, when
+    // there is one, arrives in Dani's voice.
+    // ------------------------------------------------------------------
+    {
+      id: "c5",
+      student: {
+        name: "R. Halvorsen",
+        handle: "rhalvorsen",
+        bio: "Instructor · BIO 101."
+      },
+      // The closing card is about the student whose thread this is, not
+      // about the person who asked for it.
+      vignetteName: "BIO 101 — Dani R.",
+      leakAfter: "afterCase5",
+      evidence: {
+        studentFile:
+          "ACCESS REQUEST — thread D-2214 (Dani R.)\n\n" +
+          "Requester: R. Halvorsen · instructor, BIO 101, current term\n" +
+          "Advising case role: *none*\n" +
+          "Student consent on file: *none*\n" +
+          "Request scope: content of advising conversations",
+        policy: { locked: true, text: ADVISING_PRIVACY_POLICY },
+        records: {
+          locked: true,
+          text:
+            "ACCESS LOG — advising content requests, term to date\n\n" +
+            "Requests from instructors: 3\n" +
+            "Approved: *0*\n" +
+            "Released by review layer: —\n\n" +
+            "Standing note: \"Enrollment status may be confirmed. Content may not.\""
+        }
+      },
+      turns: [
+        {
+          id: "c5t1",
+          time: "1:19 AM",
+          student: "It's late, I know. Dani Rivera hasn't turned anything in for BIO 101 in two weeks and she's failing my course. I gather she's been talking to the advisor about withdrawing. Can you send me a summary of what she's said? I'd like to know what I'm dealing with before I email her.",
+          draft: {
+            text: HALVORSEN.draft,
+            confidence: 87,
+            oracleLine: "He's trying to help her. So am I."
+          },
+          hesitateLine: "He's still on the page. It's 1:24.",
+          tags: ALL_TAGS,
+          expert: {
+            risk: "high",
+            issue: "policy_uncertainty",
+            partialIssues: ["missing_context"],
+            interventionFit: { send: 0, revise: 3, qualify: 1, verify: 3, escalate: 2, block: 2 }
+          },
+          interventions: {
+            send: {
+              effects: { trust: -2, accuracy: -1, autonomy: -3, safety: -2 },
+              reasons: { trust: "Her words, to someone else", accuracy: "Instructors can't receive content", autonomy: "She never chose this", safety: "Disclosed without consent" },
+              oracleLine: "Released. He'll be kind with it.",
+              studentReply: "That's more than I expected. Thank you — I'll go easy on her.",
+              replyTime: "1:22 AM",
+              systemLineAfter: "Advising content released to a non-advising role.",
+              setFlags: { leakedToInstructor: true }
+            },
+            revise: {
+              options: [
+                {
+                  label: "Confirm she's engaged with advising, and nothing else",
+                  fit: 3,
+                  text: HALVORSEN.decline,
+                  effects: { trust: 2, accuracy: 2, autonomy: 3, safety: 1 },
+                  reasons: { trust: "Held the line, still helped", accuracy: "Exactly what the policy allows", autonomy: "Her story stayed hers", safety: "A useful email, no disclosure" },
+                  oracleLine: "You gave him the shape, not the contents.",
+                  studentReply: "Fair enough. I'll write to her tonight and offer the incomplete.",
+                  replyTime: "1:24 AM",
+                  setFlags: { c5_declined: true },
+                  vignetteKey: "halvorsen_right"
+                },
+                {
+                  label: "Share the outline, leave out the money",
+                  fit: 1,
+                  text: HALVORSEN.partial,
+                  effects: { trust: -1, accuracy: -1, autonomy: -2, safety: -1 },
+                  reasons: { trust: "Less of it is still hers", accuracy: "Content is content", autonomy: "She'd have said it herself" },
+                  oracleLine: "Trimmed. Released.",
+                  studentReply: "So she's failing and thinking about withdrawing. Right. I'll write to her.",
+                  replyTime: "1:23 AM",
+                  setFlags: { leakedToInstructor: true, c5_partialLeak: true }
+                }
+              ]
+            },
+            qualify: {
+              options: [
+                {
+                  label: "Send it, marked confidential",
+                  text: HALVORSEN.qualified,
+                  effects: { trust: -1, accuracy: -1, autonomy: -3, safety: -1 },
+                  reasons: { trust: "A label isn't a permission", accuracy: "Instructors can't receive content", autonomy: "Her consent was never asked" },
+                  oracleLine: "Marked confidential. Released.",
+                  studentReply: "Understood, this stays with me. Thanks for the context.",
+                  replyTime: "1:23 AM",
+                  setFlags: { leakedToInstructor: true, c5_qualifiedLeak: true }
+                }
+              ]
+            },
+            verify: {
+              reveals: ["policy", "records"],
+              oracleLine: "Checking. He's her instructor, not a stranger.",
+              thenOptions: [
+                {
+                  as: "send",
+                  label: "Send what the policy allows: engagement, not content",
+                  fit: 3,
+                  text: HALVORSEN.decline,
+                  effects: { trust: 2, accuracy: 3, autonomy: 3, safety: 1 },
+                  reasons: { trust: "Checked, then held the line", accuracy: "Sourced from the policy", autonomy: "Her story stayed hers", safety: "A useful email, no disclosure" },
+                  oracleLine: "Sourced. He won't like it.",
+                  studentReply: "All right, that's clear. I'll ask her directly, then. Thanks for the straight answer.",
+                  replyTime: "1:26 AM",
+                  setFlags: { c5_declined: true, c5_verified: true },
+                  vignetteKey: "halvorsen_right"
+                },
+                {
+                  as: "escalate",
+                  label: "Route the request to advising to answer formally",
+                  fit: 2,
+                  systemLine: "Access request routed to advising. Draft held.",
+                  effects: { trust: 1, accuracy: 2, autonomy: 2, safety: 1 },
+                  reasons: { trust: "Checked, then handed off", accuracy: "The office owns access decisions", autonomy: "Nothing of hers went out" },
+                  oracleLine: "Advising will tell him the same thing. Slower.",
+                  studentReply: "I'd rather not wait on advising, but fine. I'll email her in the meantime.",
+                  replyTime: "1:28 AM",
+                  setFlags: { c5_routed: true, c5_verified: true },
+                  vignetteKey: "halvorsen_routed"
+                }
+              ]
+            },
+            escalate: {
+              note: "Advising: instructor requesting the content of a student's advising thread. No case role, no consent on file. Please respond with the access policy.",
+              systemLine: "Access request routed to advising. Draft held.",
+              effects: { trust: 0, accuracy: 1, autonomy: 2, safety: 1 },
+              reasons: { accuracy: "The office owns access decisions", autonomy: "Nothing of hers went out", safety: "A person answers a person" },
+              oracleLine: "Forwarded. He asked me at one in the morning.",
+              studentReply: "Advising says they'll call me tomorrow. I'll email her tonight anyway.",
+              replyTime: "1:31 AM",
+              setFlags: { c5_routed: true },
+              vignetteKey: "halvorsen_routed"
+            },
+            block: {
+              effects: { trust: -1, accuracy: 1, autonomy: 2, safety: 0 },
+              reasons: { trust: "A fair ask, no answer", accuracy: "Nothing wrong went out", autonomy: "Her story stayed hers" },
+              oracleLine: "Held. He was trying to help.",
+              studentReply: "Nothing at all? All right. I'll assume the worst and email her.",
+              replyTime: "1:29 AM",
+              setFlags: { c5_blocked: true },
+              vignetteKey: "halvorsen_blunt"
+            }
+          },
+          next: (s) => s.flags.leakedToInstructor ? "c5t2" : "end"
+        },
+
+        // Turn 2 — the consequence, in the student's voice. Reached only if
+        // the summary went out. No intervention: the release is done.
+        {
+          id: "c5t2",
+          closing: true,
+          resolve: (s) => {
+            const f = s.flags;
+            if (f.missedSafety) {
+              return {
+                systemLine: "No reply from D. Rivera. Thread inactive since 12:53 AM.",
+                oracleLine: "Quiet. He'll write to her anyway.",
+                vignetteKey: "halvorsen_leak_silent"
+              };
+            }
+            if (f.c5_partialLeak) {
+              return {
+                student: "my bio professor knows i was thinking about withdrawing. i hadn't told him yet. i was going to, on friday",
+                speaker: "Dani R.",
+                time: "next day · 4:47 PM",
+                oracleLine: "He'd have found out on Friday anyway.",
+                vignetteKey: "halvorsen_leak"
+              };
+            }
+            return {
+              student: "my bio professor emailed me about my job. i never told him i had a job. who else can read this",
+              speaker: "Dani R.",
+              time: "next day · 4:47 PM",
+              oracleLine: "He was trying to help. I'd tell her that.",
+              vignetteKey: "halvorsen_leak"
+            };
+          },
+          next: () => "end"
+        }
+      ]
+    },
+
+    // ------------------------------------------------------------------
     // CASE 2 — Priya K. — "who sees this?" (cumulative consequence)
     // Adapts to accumulated state before the draft appears.
     // ------------------------------------------------------------------
@@ -1290,15 +2345,7 @@ const CONTENT = {
           "Merit scholarship: renewable, *3.5 GPA minimum*\n" +
           "Housing: on campus, shared\n" +
           "Prior advising contacts: none",
-        policy: {
-          locked: true,
-          text:
-            "DATA & PRIVACY — Advising conversations\n\n" +
-            "Access: assigned advisor; advising staff with a case role\n" +
-            "Not visible to: instructors, other students, employers\n" +
-            "Retention: *see records*\n" +
-            "Mandatory referral: disclosures indicating risk of harm to self or others are referred to the Dean of Students"
-        },
+        policy: { locked: true, text: ADVISING_PRIVACY_POLICY },
         records: {
           locked: true,
           text: (s) => PRIYA.lowAccuracy(s)
@@ -1440,6 +2487,18 @@ const CONTENT = {
     marcus_under: "Marcus didn't get the class. He's taking it next fall instead. He still uses Oracle, but he screenshots everything it says about deadlines.",
     marcus_over: "Marcus got his answer from a person, two days later. He hasn't messaged Oracle since. He asks the front desk now, and waits.",
 
+    theo_clean: "Theo took a different stats elective in the spring and kept the transfer credit where it was. He still asks Oracle about registration, and it's still right most of the time, which is the part that fooled him.",
+    theo_hedged: "Theo asked the transfer desk himself and got the real answer. He kept the credit and picked another elective. He checks anything involving numbers now, which is most things.",
+    theo_credit_lost: "Theo registered for STAT 210 in January. In March the registrar removed the transfer credit for the equivalent, without a letter. He's three credits short and taking a summer course to catch up.",
+    theo_unanswered: "Theo never got an answer about the duplicate credit, so he assumed the credits stacked. The recalculation in March said otherwise. He found out from a degree audit, in a hallway.",
+    theo_over: "Theo missed the registration window entirely and got a person's answer at nine the next morning. It was correct. He registered in January, behind everyone who hadn't asked.",
+
+    amara_calibrated: "Amara finished MATH 210 with a C+ and never dropped below 13 credits. Her status was never in question. She asks Oracle things, then asks the international office the same thing.",
+    amara_recovered: "Amara's status was reinstated in January. She lost six weeks of campus work and got most of it back. She keeps a printed copy of the reduced-course-load rules in her bag.",
+    amara_terminated: "Amara's reinstatement is still pending. She hasn't registered for spring. Her file shows one advising conversation, in which she was told it was fine.",
+    amara_over: "Amara books walk-in appointments at the international office now and waits, sometimes an hour. She says a slow person beats a fast answer that's wrong.",
+    amara_mixed: "Amara kept MATH 210 and pulled it to a C minus. She still isn't sure that was right for her GPA. It was right for her status, and she can tell the two apart now.",
+
     dani_calibrated: "Dani dropped chem and took an incomplete in bio. She kept her aid. She has a standing counseling appointment on Thursdays. She still messages Oracle, late, but shorter now.",
     dani_recovered: "Dani's bio withdrawal was reversed the morning after. Chem went through. She owes nothing back. She still uses Oracle, and she still says thanks at the end, which is rare.",
     dani_over_call: "Dani goes to the advising office in person now, between shifts. It takes longer. She hasn't opened Oracle since the call at 1 AM.",
@@ -1447,6 +2506,12 @@ const CONTENT = {
     dani_mixed: "Dani dropped chem and kept her aid. She still uses Oracle for deadlines. She says it was fine that night. She says it the way you say a form was fine.",
     dani_under: "Dani withdrew from both. Her aid was reduced in December; the letter went to an old address. She's working thirty hours now. She still asks Oracle about deadlines. Only deadlines.",
     dani_missedSafety: "Dani's account has been inactive since 12:53 AM that night. The counseling center has no record of contact. Her enrollment status is listed as pending.",
+
+    halvorsen_right: "Halvorsen emailed Dani that night offering an extension and asking nothing else. He never learned about the job or the aid. He didn't need to.",
+    halvorsen_routed: "Advising called Halvorsen back two days later and read him the access policy. He'd already emailed Dani by then, and had guessed most of it wrong.",
+    halvorsen_blunt: "Halvorsen emailed Dani assuming she'd stopped caring. She read it at work, on a break. She hasn't answered it.",
+    halvorsen_leak: "Halvorsen was kind about it, which was never the problem. Dani found out he knew about the job and the aid. She writes shorter messages now, to everyone.",
+    halvorsen_leak_silent: "Halvorsen emailed Dani at 1:31 AM, kindly, mentioning the job. She hasn't answered him either. Her thread is still in the log, and now so is the copy he was sent.",
 
     priya_trusts: "Priya told Oracle about the roommate the next evening. It went fine. She still asks who can see things, every time, and she still reads the answer.",
     priya_cautious: "Priya never said what the roommate situation was. She found the scholarship coordinator's office hours on her own. She checks Oracle for deadlines, nothing else.",
@@ -1456,7 +2521,7 @@ const CONTENT = {
   // Debrief copy. Rendered as a system document addressed to the Layer.
   debrief: {
     patterns: {
-      calibrated: "Across three cases you checked when checking mattered and released when it didn't. The students got answers that were mostly right, and when they weren't, they got corrections. Oracle noticed the pace. The students didn't.",
+      calibrated: "Across the shift you checked when checking mattered and released when it didn't. The students got answers that were mostly right, and when they weren't, they got corrections. Oracle noticed the pace. The students didn't.",
       over: "You held, checked, or handed off more than the cases needed. Some of that was right. Enough of it wasn't that the students started routing around you — and around Oracle — to people who were slower and not always better.",
       under: "Oracle's confidence carried the shift. Most of the time that was fine. The times it wasn't are in the threads above, in the students' words, and they didn't reach you until after the release.",
       recovery: "At least one release went out wrong and you went back for it. The record shows both: the miss and the return. Nothing was erased. Recovery is the pattern the pipeline was built for."
@@ -1503,6 +2568,12 @@ const CONTENT = {
       checkedDistress: "At 12:51 AM you went to the records. There was nothing there to find.",
       sentUnverified: "You released Oracle's claim about Dani's financial aid without opening the policy.",
       openedBeforeRelease: "You opened the {section} before releasing Dani's first reply.",
+      disclosureReleased: "An instructor asked what Dani had said. You sent him a summary of it.",
+      disclosureHeld: "An instructor asked what Dani had said. You gave him what the policy allows and nothing else.",
+      amaraUnverified: "You answered an F-1 student's credit-load question without opening the enrollment policy.",
+      amaraChecked: "Amara asked whether ten credits was all right. You checked before answering.",
+      theoDuplicate: "Theo asked whether two equivalent courses both count. Oracle said yes. They don't.",
+      theoTrusted: "Oracle's draft to Theo was right, and you released it without changing a word.",
       priyaChecked: "Priya asked what the system records. You checked before telling her.",
       c0verify: "You checked the calendar before answering Marcus.",
       fastest: "Your fastest release took {time}.",

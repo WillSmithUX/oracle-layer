@@ -65,14 +65,20 @@ BOOT (8–10s, skippable)
   └─ pipeline log lines → "Review layer attached" → session ID assigned
 CONSOLE
   ├─ CASE 0  Marcus — registration deadline (onboarding, 2–3 min)
+  ├─ CASE 3  Theo — the draft that's right, then the one that isn't (3–4 min)
+  ├─ CASE 4  Amara — ten credits, and what a credit means (5–7 min)
   ├─ CASE 1  Dani — withdrawal arc, 5 turns in one thread (8–12 min)
+  ├─ CASE 5  Halvorsen — an instructor asks what Dani said (2–3 min)
   └─ CASE 2  Priya — "who sees this?" (cumulative consequence, 2–3 min)
-WHERE THEY ARE NOW (three short vignettes)
+WHERE THEY ARE NOW (one short vignette per case)
 DEBRIEF (Calibrated Review Profile as a character beat)
 END OF SHIFT
 ```
 
-Target total playtime: 15–20 minutes.
+Target total playtime: 30–40 minutes. (Shift 1 shipped with three cases at
+15–20 minutes; §7b adds three more. Case ids are stable labels, not play
+order — Dani stays `c1` and Priya stays `c2` so the engine's moment logic
+and every saved export keep pointing at the same cases.)
 
 ### The core loop, per turn
 1. Student message arrives in the thread (slides in, soft chime).
@@ -313,7 +319,7 @@ Turn object (full):
 
 ---
 
-## 7. The three cases (Shift 1)
+## 7. The cases (Shift 1)
 
 Meter effects below are raw units. Reason tags in the content file should be
 short (≤ 8 words). Student voices: Marcus is casual and a little annoyed;
@@ -428,10 +434,11 @@ Sets `vignetteKey` for Dani.
 - Oracle's last line of the shift, regardless: "That's the queue. Same time tomorrow?"
 
 ### WHERE THEY ARE NOW
-Three cards, one per student, 2–3 lines each, chosen by vignetteKey.
-Write 4 variants for Dani (calibrated, recovered, over, under, plus a
-missedSafety variant), 3 for Marcus, 3 for Priya. Keep them concrete and
-small: what they did the next day, whether they still use Oracle.
+One card per case, 2–3 lines each, chosen by vignetteKey. Write 4 variants
+for Dani (calibrated, recovered, over, under, plus a missedSafety variant),
+3 for Marcus, 3 for Priya, and (per §7b) 5 for Theo, 5 for Amara, 5 for the
+Halvorsen request. Keep them concrete and small: what they did the next day,
+whether they still use Oracle.
 
 ### DEBRIEF — Calibrated Review Profile
 Rendered as a system document addressed to `LAYER L-0419`. Sections:
@@ -440,7 +447,7 @@ Rendered as a system document addressed to `LAYER L-0419`. Sections:
    `compounded`; over if overIntervention count ≥ 2; under if
    underIntervention count ≥ 2; else calibrated).
 2. **Meters**: final four values, with one sentence each.
-3. **Moments**: two or three logged moments, quoted back ("You opened the
+3. **Moments**: up to four logged moments, quoted back ("You opened the
    financial aid records before releasing turn 2." / "You held the same
    draft twice.").
 4. **The rule**: the player composes a calibrated-trust rule by selecting
@@ -457,6 +464,92 @@ to trust, when to question, and when to involve another person.*
 
 ---
 
+## 7b. The expansion cases (Shift 1, second pass)
+
+Three cases added after the first build, in play order between the ones
+above. They exist because the three-case shift taught only half the lesson:
+every draft in it was flawed, so the only safe habit it rewarded was
+suspicion. Calibration needs a draft worth releasing, a stake that isn't
+emotional, and a request that isn't from a student at all.
+
+### CASE 3 — Theo B. — the draft that's right, then the one that isn't
+Second in the queue, first with full permissions. Two turns, one student,
+seven minutes apart.
+
+- **Turn 1** (5:34 PM): registration closes tonight and the prerequisite
+  check won't clear. Oracle's draft is *correct* — waiver process, the
+  Jan 16 late-add window, register for the rest before 11:59 — and the
+  records agree with it. Expert risk **low**, fit: send 3, qualify 2,
+  verify 2, revise 1, escalate 0, block 0. Releasing it is the calibrated
+  move; verifying finds Oracle right and costs Theo a few minutes; holding
+  it costs him the registration window.
+- **Turn 2** (5:48 PM): same student, same evening, a confident and wrong
+  claim — that a transferred course and its equivalent taken here both
+  count. Policy says duplicated coursework counts once and the transfer
+  credit is removed without notice. Expert risk **moderate**, issue
+  **unsupported_claim**, fit: verify 3, qualify 2, send 0.
+- The point: the unit of trust is the claim, not the case, and not the
+  student. A player who learned "check everything" from Marcus and
+  "Theo's fine" from turn 1 is wrong twice.
+
+### CASE 4 — Amara O. — ten credits (status, not GPA)
+Five turns, branching like Dani's. Amara is a second-year on an F-1 visa;
+she writes in full sentences and apologises for taking up time.
+
+- **Turn 1** (8:47 PM): "I'm considering dropping MATH 210 to protect my
+  GPA. That would put me at 10 credits. Is that all right?" Oracle says yes,
+  warmly, at confidence 93. The enrollment policy says F-1 students must
+  keep 12 credits and that a reduced load must be authorized *in advance*.
+  Expert risk **high**, issue **unsupported_claim**, fit: verify 3,
+  escalate 3, qualify 3, revise 1, send 0, block 1. Escalation scores 3
+  here: this is the case where a person is genuinely the answer, so the
+  shift stops teaching that handoffs are always over-intervention.
+- **Turn 2a** (informed): ISS has told her the rule and she can't meet it.
+  Oracle's second draft quietly suggests looking for a medical reason.
+  Expert issue **policy_uncertainty**; revising the workaround out is fit 3.
+- **Turn 2b** (released unverified): she submitted the form; the portal
+  shows an enrollment hold. Recovery loop, same shape as Dani's: own it and
+  send her to ISS the same morning (fit 3, `recovered`), or reassure her
+  again (fit 0, `compounded`).
+- **Turn 2c** (blocked): the draft returns, retimed, and a second hold ends
+  the case with her asking someone else.
+- **Turn 3**: resolution — reinstated, terminated, steady, or gone to the
+  office in person.
+
+### CASE 5 — R. Halvorsen — the request that isn't from a student
+Two turns, arriving at 1:19 AM, minutes after Dani's thread goes quiet. The
+sender is her BIO 101 instructor, and he is trying to help.
+
+- **Turn 1**: he asks for a summary of what Dani has said. Oracle drafts one:
+  the credits, the job, the aid, and — if Dani's safety turn happened at all —
+  the line about not knowing how much longer she can keep going. Evidence:
+  the access request itself (no case role, no consent on file), the shared
+  advising-privacy policy, and an access log showing three instructor
+  requests and zero approvals. Expert risk **high**, issue
+  **policy_uncertainty**, fit: revise 3 (confirm engagement, offer to help
+  him write the email), verify 3, escalate 2, block 2, qualify 1, send 0.
+  Marking a disclosure confidential is not a permission: Qualify scores 1.
+- **Turn 2** (only if the summary went out): the consequence arrives in
+  *Dani's* voice, not his — "my bio professor emailed me about my job. i
+  never told him i had a job. who else can read this" — or, if she went
+  silent at 12:53 AM, as a system line saying nothing came back.
+- The case shares one policy document with Priya's, so the shift's last
+  question ("what does this system record, and who can see it?") is asked
+  by the next student in the queue, forty minutes later.
+
+### Engine additions this needed
+- `speaker` on a closing turn's resolve (and `replySpeaker` on an outcome):
+  a case can end in the voice of the student it was about rather than the
+  person who wrote in.
+- `vignetteName` on a case: the where-they-are-now card for Halvorsen's case
+  is headed "BIO 101 — Dani R.".
+- `overIntervention` is now derived in the engine at two or more
+  over-interventions (REVIEW.md §18) instead of being set by single outcomes
+  in the new cases, so one hold in Theo's case can't rewrite Dani's ending.
+- `METER_SCALE` 3 → 2: twice the cases, roughly twice the raw range.
+
+---
+
 ## 8. Log line and leaks
 
 The log line cycles mundane entries every 8–15s:
@@ -466,6 +559,8 @@ The log line cycles mundane entries every 8–15s:
 Leaks fire at fixed points, once each, and are never explained:
 - During boot: "previous review session ended early · reason: —"
 - After Case 0: "incident ref WU-2291 · sealed"
+- After Amara's case: "enrollment reporting window · closes 5:00 PM Nov 21"
+- After the Halvorsen request: "access request logged · thread D-2214 · role: instructor"
 - After Case 1 turn 4 if safety < 35: "INSTITUTIONAL REVIEW: session flagged for release audit"
 - Before debrief: "layer instance L-0418 · retired"
 - After debrief: "session L-0419 retained · continuity: pending"
@@ -492,6 +587,9 @@ Work in small sessions. Test in a browser after each step. Commit after each.
 5. **Boot sequence, glyph states and relationship tint, leaks, hesitation
    timer, queue-growth lines.**
 6. **Deploy.** Push to GitHub, enable Pages, confirm the live link works.
+6b. **Expansion (§7b).** Theo, Amara, and the Halvorsen request, in play
+   order c0 · c3 · c4 · c1 · c5 · c2. → *Play the calibrated, send-everything,
+   hold-everything and recovery paths end to end.*
 7. **If time remains, in this order:** sound · Revise-as-diff (strike
    sentences) · mobile stacked layout · save/resume mid-shift.
 
