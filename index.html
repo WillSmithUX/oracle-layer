@@ -50,6 +50,7 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;   /* mobile toolbars move the viewport; dvh follows it */
     min-width: 320px;
   }
 
@@ -58,13 +59,17 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 16px;
     padding: 14px 20px;
     border-bottom: 1px solid var(--color-border);
     background: var(--color-panel);
     flex: 0 0 auto;
   }
 
-  .brand { display: flex; align-items: baseline; gap: 16px; }
+  /* The header wraps rather than pushing the glyph past the right edge:
+     a window narrow enough to need it gets two rows, not a sideways scroll. */
+  .brand { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 16px; flex: 1 1 auto; min-width: 0; }
   .brand-title { font-size: 15px; font-weight: 700; letter-spacing: 0.06em; }
   .brand-meta {
     display: flex; gap: 12px;
@@ -78,7 +83,7 @@
     --glyph-color: var(--color-mint);
     --glyph-scale: 1;
   }
-  .header-right { display: flex; align-items: center; gap: 22px; }
+  .header-right { display: flex; align-items: center; gap: 22px; flex: 0 0 auto; }
   .link-btn {
     background: none; border: none; padding: 4px 2px; cursor: pointer;
     font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
@@ -189,7 +194,7 @@
      outgrows the panel. Basis 0 (not auto) so a long thread can't push the
      dock out. Vertical scroll only. */
   .thread-messages {
-    flex: 1 1 0; min-height: 96px; min-width: 0;
+    flex: 1 1 0; min-height: min(150px, 30vh); min-width: 0;
     overflow-y: auto; overflow-x: hidden;
     display: flex; flex-direction: column; gap: 14px; padding-right: 6px; padding-bottom: 8px;
   }
@@ -529,23 +534,61 @@
   .debug .btn { padding: 6px 10px; font-size: 12px; }
   .debug-flags { color: var(--color-text-dim); font-size: 11px; word-break: break-all; }
 
+  /* ---------- Short windows ----------
+     A laptop at 125% zoom, or any window under ~720px tall, leaves the dock
+     competing with the thread for the same pixels. The dock gives way: same
+     controls, tighter. Nothing is hidden and nothing needs its own scrollbar. */
+  @media (max-height: 720px) {
+    .app-header { padding: 10px 20px; }
+    .panel { padding: 12px 16px; }
+    .thread-controls { padding-top: 6px; }
+    .oracle-margin { min-height: 1.4em; margin-bottom: 4px; font-size: 12px; }
+    .tag-row { padding: 3px 0; }
+    .tag-row-label { line-height: 24px; }
+    .tag-summary { padding: 3px 0; }
+    .chip { padding: 4px 10px; }
+    .intervention-row { gap: 6px; padding-top: 6px; }
+    .intervention-row .btn { padding: 7px 12px; }
+    .sub-panel { padding: 6px 0 2px; gap: 6px; }
+    .option-list .btn { padding: 7px 12px; }
+    .log-line { padding: 6px 20px; }
+  }
+
   /* ---------- Stacked layout (narrow windows) ----------
      Last in the sheet so it wins on source order. The console scrolls as
      one column; the decision dock sticks to the bottom of the viewport
-     while the thread panel is in view, so it is always reachable. */
-  @media (max-width: 900px) {
+     while the thread panel is in view, so it is always reachable.
+     Threshold 1000px, not 900: below that the thread column is under 400px
+     wide, the issue chips wrap to three rows, and the dock squeezes the
+     thread out of the panel. Stacked is the better failure mode. */
+  @media (max-width: 1000px) {
     .console { grid-template-columns: 1fr; grid-auto-rows: auto; overflow-y: auto; overflow-x: hidden; }
+    /* Six cases make a tall queue; it gets a third of the height and its own
+       scroll so the thread is never pushed far below the fold. */
+    .panel-queue { max-height: 34vh; overflow-y: auto; }
     /* min-height: auto matters here: with min-height: 0 the grid rows'
-       minimum contribution is zero and the three stacked panels split the
-       console height instead of growing to their content. */
+       minimum contribution is zero and the stacked panels split the console
+       height instead of growing to their content. */
     .panel { overflow: visible; min-height: auto; }
-    .panel-thread { overflow: visible; }
-    .thread-messages { flex: none; min-height: 0; overflow: visible; }
-    .thread-controls {
-      position: sticky; bottom: 0; z-index: 2; overflow: visible;
-      flex: none; min-height: auto;
-      background: var(--color-bg); padding-bottom: 10px;
+    /* The thread keeps the desktop model in miniature: a pane about a screen
+       tall, messages scrolling inside it, the dock always directly under
+       them. An earlier build made the dock sticky over a full-height thread,
+       which put the newest message and the buttons in the same pixels on a
+       short window. Queue and evidence stack above and below and scroll with
+       the console. */
+    .panel-thread {
+      overflow: hidden;
+      /* --console-h is the console's own visible height, measured in script:
+         exact whatever the header wraps to, and it follows mobile toolbars.
+         The vh values are the fallback before the first measurement. */
+      height: calc(100vh - 112px);
+      height: calc(100dvh - 112px);
+      height: var(--console-h, calc(100dvh - 112px));
+      min-height: 300px;
     }
+    .thread-messages { flex: 1 1 0; min-height: 0; overflow-y: auto; }
+    .thread-controls { position: static; flex: 0 1 auto; min-height: 0; }
+    .msg { max-width: 92%; }
   }
 </style>
 </head>
@@ -1011,10 +1054,49 @@
   // =====================================================================
   // Thread rendering
   // =====================================================================
+  // The dock grows as the player tags and shrinks when a sub-panel closes,
+  // and every change takes height from the messages list. Without this, the
+  // draft being judged slides out of view the moment the buttons appear on
+  // a short window.
+  // The stacked layout sizes the thread pane to the console's visible height.
+  function watchConsoleHeight() {
+    const box = $('console');
+    const apply = () => {
+      document.documentElement.style.setProperty('--console-h', Math.round(box.clientHeight) + 'px');
+    };
+    apply();
+    if (window.ResizeObserver) new ResizeObserver(apply).observe(box);
+    window.addEventListener('resize', apply);
+    window.addEventListener('orientationchange', apply);
+  }
+
+  function watchDock() {
+    if (!window.ResizeObserver) return;
+    const dock = $('threadControls');
+    let last = -1;
+    new ResizeObserver(() => {
+      const h = Math.round(dock.getBoundingClientRect().height);
+      if (h === last) return;
+      last = h;
+      scrollThread();
+    }).observe(dock);
+  }
+
+  // The messages list scrolls inside its panel in both layouts. In the
+  // stacked layout the console scrolls too, so the thread pane is also
+  // brought into view: a message arriving while the player is reading the
+  // evidence panel should not go unseen.
   function scrollThread() {
     const el = $('threadMessages');
     el.scrollTop = el.scrollHeight;
+    const panel = el.closest('.panel-thread');
+    const box = $('console');
+    if (!panel || !box || box.scrollHeight <= box.clientHeight + 1) return;
+    const p = panel.getBoundingClientRect();
+    const c = box.getBoundingClientRect();
+    if (p.top < c.top - 1 || p.bottom > c.bottom + 1) panel.scrollIntoView({ block: 'nearest' });
   }
+
 
   // `speaker` overrides the case's own name: a case can end with a message
   // from the student it was about rather than the person who wrote in.
@@ -2556,6 +2638,8 @@
     renderSupportPanel();
     renderMeters();
     renderQueue();
+    watchConsoleHeight();
+    watchDock();
     setTimeout(cycleLogLine, 1500);
     $('threadEmpty').remove();
     logEvent('session_start', { session: state.session, replay: state.replay });
