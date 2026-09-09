@@ -809,6 +809,7 @@
     <section class="panel panel-thread" aria-label="Thread">
       <h2 class="panel-title">Thread</h2>
       <div class="review-banner" id="reviewBanner" hidden></div>
+      <div class="thread-messages" id="reviewThread" hidden></div>
       <div class="thread-messages" id="threadMessages" role="log">
         <div class="thread-empty" id="threadEmpty"><p>No case loaded.</p></div>
       </div>
@@ -1146,6 +1147,8 @@
     $('logLine').classList.add('is-leak');
     state.ui.logHoldUntil = Date.now() + TIMING.LOG_LEAK_HOLD_MS;
     sfx('leak');
+    // The log line is aria-hidden set dressing; a leak is not.
+    announce(text);
     logEvent('leak', { text });
   }
 
@@ -1265,10 +1268,11 @@
       a.preload = "auto";
       a.volume = 0;
       a.addEventListener('error', () => {
-        // No track on disk (or a codec the browser won't take): the game is
-        // silent and says so by dropping the control rather than lying.
+        // No track on disk, or a codec the browser won't take. The effects
+        // are synthesised and still play, so the control stays: it governs
+        // sound, not just music.
         music.available = false;
-        $('soundBtn').hidden = true;
+        renderSoundBtn();
       });
       a.addEventListener('timeupdate', () => musicAdvance(a));
       return a;
@@ -1353,14 +1357,13 @@
   function renderSoundBtn() {
     const btn = $('soundBtn');
     const labels = (CONTENT.ui && CONTENT.ui.sound) || {};
-    btn.hidden = !music.available;
+    btn.hidden = false;
     btn.textContent = music.on ? (labels.on || "Sound on") : (labels.off || "Sound off");
     btn.setAttribute('aria-pressed', String(music.on));
     btn.title = labels.title || "Music";
   }
 
   function toggleSound() {
-    if (!music.available) return;
     music.on = !music.on;
     writeStore(STORAGE_SOUND, music.on);
     logEvent('sound_toggle', { on: music.on });
@@ -1954,7 +1957,9 @@
         caseId: cs ? cs.id : null, caseName: cs ? cs.student.name : null,
         turnId: turn ? turn.id : null, t: Date.now()
       });
-      if (reason) r.textContent = reason;
+      // Ten authored outcomes move a meter without a reason. Leaving the
+      // previous one on screen would credit this delta to the last case.
+      r.textContent = reason;
       r.classList.add('is-shown');
       sfx('tick', delta);
       announce(`${METER_NAMES[key]} ${delta > 0 ? "up" : "down"} ${Math.abs(delta)}${reason ? ", " + reason : ""}.`);
@@ -2889,7 +2894,6 @@
     }
     renderQueue();
     $('threadMessages').innerHTML = "";
-    state.ui.liveThreadHtml = "";
     $('threadControls').hidden = false;
     startTurn();
   }
@@ -3011,14 +3015,18 @@
     const cs = CONTENT.cases.find((c) => c.id === caseId);
     const html = state.ui.threadHtml[caseId];
     if (!cs || !html) return;
-    if (!state.ui.reviewingCaseId) {
-      state.ui.liveThreadHtml = $('threadMessages').innerHTML;
-      state.ui.reviewReturn = from || 'console';
-    }
+    if (!state.ui.reviewingCaseId) state.ui.reviewReturn = from || 'console';
     state.ui.reviewingCaseId = caseId;
     disarmHesitation();
     if (state.ui.reviewReturn === 'debrief') hideScreens();
-    $('threadMessages').innerHTML = html;
+    // The live thread is hidden, never rebuilt: the engine holds references
+    // into it (the draft block, an in-flight stream), and swapping its HTML
+    // left a release updating a node that was no longer on screen.
+    const rt = $('reviewThread');
+    rt.innerHTML = html;
+    rt.hidden = false;
+    rt.scrollTop = rt.scrollHeight;
+    $('threadMessages').hidden = true;
     $('threadControls').hidden = true;
     const banner = $('reviewBanner');
     const U = CONTENT.ui;
@@ -3042,10 +3050,13 @@
     state.ui.reviewReturn = null;
     $('reviewBanner').hidden = true;
     $('reviewBanner').innerHTML = "";
+    const rt = $('reviewThread');
+    rt.hidden = true;
+    rt.innerHTML = "";
+    $('threadMessages').hidden = false;
     if (from === 'debrief') {
       showScreen('screenDebrief');
     } else {
-      $('threadMessages').innerHTML = state.ui.liveThreadHtml || "";
       $('threadControls').hidden = state.ui.shiftEnded;
       if (!state.ui.locked) armHesitation();
       scrollThread();
@@ -3594,6 +3605,10 @@
 
   // The row a digit belongs to right now.
   function activeRow() {
+    // Reading a closed case hides the dock through its parent, which left
+    // the rows themselves reporting visible: digits could tag and even hold
+    // Send on a turn the player could not see.
+    if (state.ui.reviewingCaseId || $('threadControls').hidden) return null;
     if (!$('subPanel').hidden && subPanelOptions) return 'options';
     if (state.ui.locked) return null;
     if (!$('tagRiskRow').hidden && !state.ui.riskTag && !state.ui.tagsFrozen) return 'risk';
@@ -3676,7 +3691,8 @@
     }
     const typingNow = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
     const dialogOpen = !$('supportPanel').hidden || !$('oraclePanel').hidden || !$('debugPanel').hidden;
-    if (!typingNow && !dialogOpen && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const consoleUp = !$('console').hidden;
+    if (!typingNow && !dialogOpen && consoleUp && !e.ctrlKey && !e.metaKey && !e.altKey) {
       if (e.key === 'Tab') markKeyboard();
       // A streaming draft swallows the first key: skipping and acting in the
       // same press would commit a decision the player has not finished reading.
@@ -3729,6 +3745,10 @@
         openOracle();
         return;
       }
+    }
+    if (!typingNow && !dialogOpen && !consoleUp && e.key === 'Enter') {
+      markKeyboard();
+      if (pressEnter()) { e.preventDefault(); return; }
     }
     if (e.key === 'Escape') {
       if (!$('supportPanel').hidden) { closeSupport(); return; }
